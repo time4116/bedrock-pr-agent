@@ -1,56 +1,9 @@
-# Deployment — CDK Consolidation (TODO)
+# Deployment — CDK Implementation
 
-## Current state (two-step manual process)
+CDK implementation is complete. Both the AgentCore Runtime and Lambda infrastructure
+are deployed in a single command.
 
-```bash
-# Step 1 — Build and deploy AgentCore Runtime
-agentcore configure -e pr_agent.py -r us-east-1
-agentcore launch --local-build
-
-# Step 2 — Deploy Lambda infrastructure (separate)
-sam build --use-container
-sam deploy --guided
-```
-
-Step 1 uses the `agentcore` CLI to build and push the Docker image to ECR and
-create/update the AgentCore Runtime. Step 2 deploys Lambda + SQS + API Gateway via SAM.
-
-## Goal: single `cdk deploy` command
-
-Replace both steps with a Python CDK app. **Native CDK and CloudFormation support for
-AgentCore Runtime is available** as of CDK v2.221.0 — no custom resource needed.
-
-1. **Builds and pushes the Docker image** using `aws_cdk.aws_ecr_assets.DockerImageAsset`
-   - Builds from `.bedrock_agentcore/pr_agent/Dockerfile`
-   - CDK handles ECR repository creation and image push automatically
-
-2. **Creates the AgentCore Runtime** using `aws_cdk.aws_bedrock_agentcore_alpha`
-   - Native L2 construct (CDK v2.221.0+): `aws_bedrock_agentcore_alpha.Runtime`
-   - CloudFormation resource type: `AWS::BedrockAgentCore::Runtime` (released Sept 2025)
-   - No custom resource Lambda required
-
-3. **Deploys Lambda + SQS + API Gateway** using native CDK constructs
-   - Replace `template.yaml` with a CDK stack
-   - `aws_cdk.aws_lambda.Function` with `AGENT_ARN` env var pointing to step 2's ARN
-   - `aws_cdk.aws_sqs.Queue` with DLQ
-   - `aws_cdk.aws_apigateway.RestApi` for GitHub webhook endpoint
-   - `aws_cdk.aws_lambda_event_sources.SqsEventSource` wiring Lambda to SQS
-
-4. **Wires Secrets Manager** permissions to Lambda execution role
-
-### File structure
-
-```
-deploy/
-├── app.py              # CDK app entrypoint
-├── stacks/
-│   ├── agentcore_stack.py   # AgentCore Runtime (aws_bedrock_agentcore_alpha.Runtime)
-│   └── lambda_stack.py      # Lambda + SQS + API Gateway
-├── requirements.txt    # aws-cdk-lib, aws-cdk.aws-bedrock-agentcore-alpha, constructs
-└── cdk.json
-```
-
-### Deploy command
+## Deploy
 
 ```bash
 cd deploy
@@ -58,8 +11,51 @@ pip install -r requirements.txt
 cdk deploy --all
 ```
 
-### Notes
+Set environment variables before deploying (see `.env.example`):
 
-- CDK requires Node.js for the CDK CLI (`npm install -g aws-cdk`)
-- `aws_bedrock_agentcore_alpha` is an alpha module — API may change between CDK versions
-- `bedrock-agentcore-starter-toolkit` (the old PyPI package) is now legacy; use CDK directly
+```bash
+export AWS_ACCOUNT=123456789012
+export AWS_REGION=us-east-1
+export STAGE=dev
+export GITHUB_SECRET_NAME=github-pr-agent/github
+export BEDROCK_MODEL_ID=arn:aws:bedrock:us-east-1:...
+export ALLOWED_REPOS=your-org/your-repo
+```
+
+## File structure
+
+```
+deploy/
+├── app.py                      # CDK app entrypoint
+├── cdk.json
+├── requirements.txt
+└── stacks/
+    ├── __init__.py
+    ├── agentcore_stack.py      # AgentCore Runtime + IAM execution role + ECR image
+    └── lambda_stack.py         # Lambda + SQS + API Gateway
+```
+
+## Stacks
+
+**GitHubPrAgent-{stage}-AgentCore**
+- Builds and pushes Docker image from `.bedrock_agentcore/pr_agent/Dockerfile` via `DockerImageAsset`
+- Creates IAM execution role matching `scripts/create_agentcore_role.py` exactly
+- Creates `AWS::BedrockAgentCore::Runtime` via `CfnRuntime` (L1 construct)
+- Exports `AgentRuntimeArn`
+
+**GitHubPrAgent-{stage}-Lambda**
+- Reads `AgentRuntimeArn` from AgentCore stack output and scopes worker IAM to it
+- WebhookHandler (Python 3.12, 10s timeout, 512 MB)
+- WorkerHandler (Python 3.12, 900s timeout, 512 MB, max concurrency 10)
+- SQS queue (visibility 1200s, retention 24h, DLQ max-receive 3, DLQ retention 14d)
+- REST API with POST /webhook → WebhookHandler
+- CloudWatch log groups with 30-day retention for both Lambdas
+
+## Notes
+
+- `aws_cdk.aws_bedrock_agentcore_alpha` is an alpha module — its API may change between
+  CDK versions. `CfnRuntime` (L1) is used here for stability; migrate to L2 `Runtime`
+  once the construct stabilises.
+- `samconfig.toml` and `template.yaml` are superseded by this CDK app but are kept for
+  reference.
+- CDK requires Node.js for the CLI: `npm install -g aws-cdk`
