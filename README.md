@@ -18,10 +18,10 @@ API Gateway ──► Webhook Lambda  (validates HMAC signature, filters repos, 
                       ▼
             AgentCore Runtime  (containerized LangGraph agent — no Lambda timeout)
             ┌──────────────────────────────────────┐
-            │  Tool 1: fetch_pr_diff               │
-            │  Tool 2: check_organization_policy   │
-            │  Tool 3: validate_terraform_plan      │
-            │  Tool 4: post_github_comment          │
+            │  Node 1: fetch_diff                  │
+            │  Node 2: check_policy      (optional)│
+            │  Node 3: validate_terraform (optional)│
+            │  Node 4: analyze_and_comment         │
             └──────────────────────────────────────┘
                       │
                       ▼
@@ -50,20 +50,21 @@ The analysis question is: **does the code diff match what the PR description say
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
-pip install bedrock-agentcore-starter-toolkit
+npm install -g aws-cdk          # CDK CLI requires Node.js
 
 # 2. Configure environment
-cp .env.example .env  # Edit with your values
+cp .env.example .env            # Edit with your values
 
-# 3. Deploy Lambda infrastructure (creates AgentCore IAM role)
-sam build && sam deploy --guided
-
-# 4. Deploy AgentCore container agent
-agentcore configure -e pr_agent.py -r us-east-1
-agentcore launch --local-build
-
-# 5. Update .env with the Agent ARN from step 4, redeploy SAM
-sam deploy --config-env dev
+# 3. Deploy everything (AgentCore Runtime + Lambda + SQS + API Gateway)
+cd deploy
+pip install -r requirements.txt
+export AWS_ACCOUNT=123456789012
+export AWS_REGION=us-east-1
+export STAGE=dev
+export GITHUB_SECRET_NAME=github-pr-agent/github
+export BEDROCK_MODEL_ID=<your-bedrock-inference-profile-arn>
+export ALLOWED_REPOS=your-org/your-repo
+cdk deploy --all
 ```
 
 ## Configuration
@@ -77,7 +78,7 @@ All configuration is via environment variables. See `.env.example` for the full 
 | `ALLOWED_REPOS` | *(empty = all)* | Comma-separated `owner/repo` filter |
 | `TERRAFORM_VALIDATION_REPOS` | *(empty)* | Repos that get Terraform plan analysis |
 | `ORG_POLICY_CHECK_ENABLED` | `false` | Enable policy checking from `policies/` directory |
-| `AGENT_ARN` | — | AgentCore Runtime ARN (set after first `agentcore launch`) |
+| `STAGE` | `dev` | Deployment stage; used to namespace all AWS resource names |
 
 ## Organization Policy Checking
 
@@ -107,15 +108,17 @@ The agent fills in template placeholders based on its findings.
 
 ## Deployment
 
-Two-step deploy (CDK consolidation planned — see `deploy/TODO.md`):
+Single command deploys everything — AgentCore Runtime (Docker image → ECR), Lambda functions, SQS queue, and API Gateway:
 
 ```bash
-# Lambda infrastructure (Webhook + Worker + SQS + API Gateway + IAM roles)
-sam build && sam deploy --guided
-
-# AgentCore container runtime (Docker image → ECR → runtime)
-agentcore launch --execution-role-arn <role-arn-from-sam-outputs>
+cd deploy
+pip install -r requirements.txt
+cdk deploy --all
 ```
+
+See `deploy/` for the full CDK app (`app.py`, `stacks/agentcore_stack.py`, `stacks/lambda_stack.py`).
+
+> **Note:** CDK requires Node.js for the CLI (`npm install -g aws-cdk`). The `aws_bedrock_agentcore_alpha` module is alpha — pin the CDK version in `deploy/requirements.txt` to avoid API changes between upgrades.
 
 ## Troubleshooting
 
@@ -124,12 +127,7 @@ agentcore launch --execution-role-arn <role-arn-from-sam-outputs>
 
 **Root cause:** Worker Lambda `boto3` read timeout (60s default) is shorter than AgentCore processing time (5–10 min). SQS message becomes visible again → new Lambda invocation → second comment.
 
-**Fix applied:** `boto3` read timeout increased to 900s, in-memory dedup cache in `post_github_comment`, Worker Lambda timeout set to 15 min, SQS visibility timeout 20 min.
-
-### `ValidationException: toolResult blocks exceeds toolUse blocks`
-**Symptom:** AgentCore logs show Bedrock API error after ~18 messages.
-
-**Cause:** Conversation history accumulation. Fixed by creating a fresh agent instance per PR (`_create_agent()` in `pr_agent.py`).
+**Fix applied:** `boto3` read timeout increased to 900s, idempotent create-or-update in `github_commenter` (HTML marker identifies the bot comment), Worker Lambda timeout 15 min, SQS visibility timeout 20 min.
 
 ### No comment posted
 1. Check CloudWatch logs: webhook Lambda → worker Lambda → AgentCore runtime
