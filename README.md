@@ -1,6 +1,6 @@
 # GitHub PR Agent
 
-An AI-powered GitHub App that automatically reviews pull requests by analyzing code changes against the PR's own description. Built on AWS Bedrock AgentCore Runtime with a Strands agent (Claude Sonnet 4), it validates whether the diff matches what the author said they did, checks organization policies, and optionally validates Terraform plans—all without manual intervention.
+An AI-powered GitHub App that automatically reviews pull requests by analyzing code changes against the PR's own description. Built on AWS Bedrock AgentCore Runtime with a LangGraph StateGraph (Claude Sonnet 4 via Bedrock), it validates whether the diff matches what the author said they did, checks organization policies, and optionally validates Terraform plans—all without manual intervention.
 
 The app responds to every `pull_request` event and leaves a structured, actionable comment within minutes.
 
@@ -16,7 +16,7 @@ API Gateway ──► Webhook Lambda  (validates HMAC signature, filters repos, 
                Worker Lambda   (triggers AgentCore Runtime)
                       │
                       ▼
-            AgentCore Runtime  (containerized Strands agent — no Lambda timeout)
+            AgentCore Runtime  (containerized LangGraph agent — no Lambda timeout)
             ┌──────────────────────────────────────┐
             │  Tool 1: fetch_pr_diff               │
             │  Tool 2: check_organization_policy   │
