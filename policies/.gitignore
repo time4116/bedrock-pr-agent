@@ -1,0 +1,7 @@
+# Policy documents are org-specific — add your own .md files here.
+# This file keeps the directory tracked while ignoring personal policy docs.
+# Only IMPLEMENTATION.md and example-policy.md are committed.
+*.txt
+*.pdf
+!example-policy.md
+!IMPLEMENTATION.md
