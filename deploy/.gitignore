@@ -1,0 +1,6 @@
+# CDK output and node_modules are ignored until the CDK stack is implemented.
+cdk.out/
+node_modules/
+*.js
+*.d.ts
+!TODO.md
