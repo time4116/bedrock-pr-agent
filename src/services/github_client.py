@@ -31,14 +31,14 @@ class GitHubClient:
         return self._github
 
     def get_installation_token(self) -> str:
-        """Return a short-lived installation access token for direct API calls."""
+        """Return a bearer token for direct API calls. PAT takes priority over App auth."""
+        token = self.creds.get('token')
+        if token:
+            return token
         if self.installation_id:
             integration = GithubIntegration(self.creds['app_id'], self.creds['private_key'])
             return integration.get_access_token(self.installation_id).token
-        token = self.creds.get('token')
-        if not token:
-            raise ValueError('No authentication method available')
-        return token
+        raise ValueError('No authentication method available')
 
     def _request(self, method: str, url: str, **kwargs) -> Any:
         """Make an authenticated REST API request."""
@@ -92,6 +92,18 @@ class GitHubClient:
                     content = zf.read(name).decode('utf-8', errors='replace')
                     parts.append(f'=== {name} ===\n{content}')
         return '\n'.join(parts)
+
+
+def create_github_client(installation_id: Optional[int]) -> Github:
+    """Return a PyGithub client. Uses GITHUB_TOKEN (PAT) when set, App auth otherwise."""
+    from src.utils.secrets import get_github_credentials
+    creds = get_github_credentials()
+    token = creds.get('token')
+    if token:
+        return Github(auth=Auth.Token(token))
+    integration = GithubIntegration(creds['app_id'], creds['private_key'])
+    auth = integration.get_access_token(installation_id)
+    return Github(auth=Auth.Token(auth.token))
 
 
 def _retry_on_rate_limit(func, max_retries=3):

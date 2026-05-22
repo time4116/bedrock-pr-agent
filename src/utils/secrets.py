@@ -58,11 +58,15 @@ def get_secret(secret_name: str) -> Dict[str, Any]:
 @cache
 def get_github_credentials() -> Dict[str, str]:
     """
-    Get GitHub App credentials from Secrets Manager (cached).
+    Get GitHub credentials.
 
-    Returns:
-        Dict with keys: app_id, webhook_secret, private_key
+    Local dev: set GITHUB_TOKEN to a personal access token — Secrets Manager is skipped.
+    Production: reads app_id, webhook_secret, private_key from Secrets Manager.
     """
+    pat = os.environ.get('GITHUB_TOKEN')
+    if pat:
+        return {'app_id': '', 'webhook_secret': '', 'private_key': '', 'token': pat}
+
     secret_name = os.environ.get('GITHUB_SECRET_NAME', 'github-pr-agent/github')
     secret = get_secret(secret_name)
 
