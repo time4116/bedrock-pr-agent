@@ -1,0 +1,22 @@
+{
+  "event_name": "pull_request",
+  "action": "opened",
+  "pull_request": {
+    "number": 1,
+    "title": "Add S3 bucket lifecycle policy",
+    "body": "Adds a 90-day lifecycle rule to archive objects to Glacier. Closes PROJ-123.",
+    "head": {
+      "ref": "feature/PROJ-123-add-s3-lifecycle-policy"
+    }
+  },
+  "repository": {
+    "full_name": "your-org/your-repo",
+    "name": "your-repo",
+    "owner": {
+      "login": "your-org"
+    }
+  },
+  "installation": {
+    "id": 12345678
+  }
+}

@@ -1,0 +1,14 @@
+# AgentCore Runtime
+bedrock-agentcore>=1.0.0
+langgraph>=0.2.0
+langchain-aws>=0.2.0
+langchain-core>=0.3.0
+
+# AWS and API clients
+boto3>=1.35.0
+PyGithub>=2.4.0
+
+# Utilities
+python-dotenv>=1.0.0
+cryptography>=43.0.0
+bedrock-agentcore-starter-toolkit>=0.2.2

@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# GitHub App private key
+*.pem
+
+# CDK
+deploy/cdk.out/
+node_modules/
+
+# AgentCore
+.bedrock_agentcore/
+.bedrock_agentcore.yaml
+.dockerignore
+
+# Testing
+coverage/
+htmlcov/
+.pytest_cache/
+.coverage
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Policies — org-specific documents; add your own .md files to policies/
+policies/*.txt
+policies/*.pdf
+
+# Design notes and planning docs
+todo/
