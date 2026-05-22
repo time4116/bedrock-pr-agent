@@ -63,23 +63,13 @@ def fetch_pr_diff(
         # Fetch the diff using GitHub API
         # PyGithub doesn't have direct diff support, so we use raw HTTP request
         import requests
-        from src.utils.secrets import get_secret
-        
-        # Get GitHub credentials
-        github_secret = get_secret(os.environ.get('GITHUB_SECRET_NAME', 'github-pr-agent/github'))
-        
-        # Create installation token
-        from github import Auth, GithubIntegration
-        app_id = github_secret.get('app_id')
-        private_key = github_secret.get('private_key')
-        
-        integration = GithubIntegration(app_id, private_key)
-        auth = integration.get_access_token(installation_id)
-        
-        # Fetch diff via GitHub API (with Accept header for diff format)
+        from src.services.github_client import GitHubClient
+
+        token = GitHubClient(installation_id).get_installation_token()
+
         diff_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
         headers = {
-            'Authorization': f'Bearer {auth.token}',
+            'Authorization': f'Bearer {token}',
             'Accept': 'application/vnd.github.v3.diff'
         }
         

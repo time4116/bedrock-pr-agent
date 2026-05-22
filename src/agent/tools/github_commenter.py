@@ -1,5 +1,5 @@
 """
-GitHub comment tool for Strands Agent.
+GitHub comment tool.
 
 This tool allows the agent to post or update comments on GitHub PRs using
 standardized templates for consistency.
@@ -51,6 +51,10 @@ def post_github_comment(
         }
     """
     try:
+        if os.environ.get('DRY_RUN', '').lower() == 'true':
+            print(comment_text)
+            return {'success': True, 'comment_id': None, 'action': 'dry_run'}
+
         # Create cache key for this PR
         cache_key = f"{owner}/{repo}/{pr_number}"
         

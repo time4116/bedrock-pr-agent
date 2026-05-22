@@ -1,5 +1,5 @@
 """
-Terraform validation tool for Strands Agent.
+Terraform validation tool.
 
 Fetches GitHub Actions workflow logs for the PR, extracts Terraform plan output,
 and returns it for agent analysis. Flags resource deletions and replacements that
