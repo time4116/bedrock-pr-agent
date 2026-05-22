@@ -1,8 +1,3 @@
-# Dependencies
-node_modules/
-package-lock.json
-yarn.lock
-
 # Python
 __pycache__/
 *.py[cod]
@@ -37,21 +32,16 @@ env/
 # GitHub App private key
 *.pem
 
-# Serverless
-.serverless/
-.build/
+# CDK
+deploy/cdk.out/
 
-# agentcore
+# AgentCore
 .bedrock_agentcore/
 .bedrock_agentcore.yaml
 .dockerignore
 
-# TypeScript (legacy - can be removed after full migration)
-*.tsbuildinfo
-
 # Testing
 coverage/
-.nyc_output/
 htmlcov/
 .pytest_cache/
 .coverage
@@ -59,9 +49,6 @@ htmlcov/
 # Logs
 logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # OS
 .DS_Store
@@ -74,10 +61,13 @@ Thumbs.db
 *.swo
 *~
 
-# AWS
-.aws-sam/
-samconfig.toml
-
-# Jupyter Notebooks (if used for testing)
+# Jupyter
 .ipynb_checkpoints/
 *.ipynb
+
+# Policies — org-specific documents; add your own .md files to policies/
+policies/*.txt
+policies/*.pdf
+
+# Design notes and planning docs
+todo/
