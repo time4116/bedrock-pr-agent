@@ -1,8 +1,8 @@
-# GitHub PR Agent
+# Bedrock PR Agent
 
-An AI-powered GitHub App that automatically reviews pull requests by analyzing code changes against the PR's own description. Built on AWS Bedrock AgentCore Runtime with a LangGraph StateGraph (Claude Sonnet 4 via Bedrock), it validates whether the diff matches what the author said they did, checks organization policies, and optionally validates Terraform plans—all without manual intervention.
+A GitHub App that automatically reviews pull requests using Claude Sonnet 4 via AWS Bedrock. Deployed on AWS — it reviews PRs on this repo automatically.
 
-The app responds to every `pull_request` event and leaves a structured, actionable comment within minutes.
+Built on Bedrock AgentCore Runtime with a LangGraph StateGraph, it validates whether the diff matches what the author said they did and optionally validates Terraform plans. Responds to every `pull_request` event and posts a structured comment within minutes.
 
 ## Architecture
 
@@ -19,9 +19,8 @@ API Gateway ──► Webhook Lambda  (validates HMAC signature, filters repos, 
             AgentCore Runtime  (containerized LangGraph agent — no Lambda timeout)
             ┌──────────────────────────────────────┐
             │  Node 1: fetch_diff                  │
-            │  Node 2: check_policy      (optional)│
-            │  Node 3: validate_terraform (optional)│
-            │  Node 4: analyze_and_comment         │
+            │  Node 2: validate_terraform (optional)│
+            │  Node 3: analyze_and_comment         │
             └──────────────────────────────────────┘
                       │
                       ▼
@@ -39,33 +38,14 @@ API Gateway ──► Webhook Lambda  (validates HMAC signature, filters repos, 
 On every `pull_request` event (`opened`, `synchronize`, `edited`):
 
 1. **Fetches the PR diff** — unified diff of all changed files, truncated at token limits with smart prioritization
-2. **Checks organization policies** *(optional)* — loads policy docs from `policies/` directory, surfaces violations and recommendations
-3. **Validates Terraform plans** *(optional, per-repo)* — downloads GitHub Actions log archive for the PR's head SHA, parses Terraform plan output, flags resource deletions and `must be replaced` operations
-4. **Posts a structured comment** — creates or updates a single bot comment (identified by HTML marker) with findings formatted via Markdown templates
+2. **Validates Terraform plans** *(optional, per-repo)* — downloads GitHub Actions log archive for the PR's head SHA, parses Terraform plan output, flags resource deletions and `must be replaced` operations
+3. **Posts a structured comment** — creates or updates a single bot comment (identified by HTML marker) with findings formatted via Markdown templates
 
 The analysis question is: **does the code diff match what the PR description says it does?** No external ticket system required.
 
-## Quick Start
+## Setup
 
-```bash
-# 1. Install dependencies
-pip install -r requirements.txt
-npm install -g aws-cdk          # CDK CLI requires Node.js
-
-# 2. Configure environment
-cp .env.example .env            # Edit with your values
-
-# 3. Deploy everything (AgentCore Runtime + Lambda + SQS + API Gateway)
-cd deploy
-pip install -r requirements.txt
-export AWS_ACCOUNT=123456789012
-export AWS_REGION=us-east-1
-export STAGE=dev
-export GITHUB_SECRET_NAME=github-pr-agent/github
-export BEDROCK_MODEL_ID=<your-bedrock-inference-profile-arn>
-export ALLOWED_REPOS=your-org/your-repo
-cdk deploy --all
-```
+See [SETUP.md](SETUP.md) for the full end-to-end guide: GitHub App creation, Secrets Manager, Bedrock model access, CDK deploy, and webhook configuration. Once deployed and installed on your repos, any new PR triggers an automatic review comment.
 
 ## Configuration
 
@@ -74,17 +54,10 @@ All configuration is via environment variables. See `.env.example` for the full 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `GITHUB_SECRET_NAME` | `github-pr-agent/github` | Secrets Manager secret with `app_id`, `webhook_secret`, `private_key` |
-| `BEDROCK_MODEL_ID` | — | Bedrock inference profile ARN (Claude Sonnet 4 recommended) |
+| `BEDROCK_MODEL_ID` | *(CDK-created)* | Bedrock inference profile ARN. CDK creates a cross-region Claude Sonnet inference profile automatically and wires it in — only set this manually to override or for local runs. |
 | `ALLOWED_REPOS` | *(empty = all)* | Comma-separated `owner/repo` filter |
 | `TERRAFORM_VALIDATION_REPOS` | *(empty)* | Repos that get Terraform plan analysis |
-| `ORG_POLICY_CHECK_ENABLED` | `false` | Enable policy checking from `policies/` directory |
 | `STAGE` | `dev` | Deployment stage; used to namespace all AWS resource names |
-
-## Organization Policy Checking
-
-Add policy documents as `.md` files to the `policies/` directory. The agent reads all docs and surfaces relevant sections in the PR comment.
-
-See `policies/IMPLEMENTATION.md` for the planned upgrade to vector-based retrieval (Bedrock Titan Embeddings + cosine similarity).
 
 ## Terraform Plan Validation
 
@@ -97,14 +70,18 @@ For repos listed in `TERRAFORM_VALIDATION_REPOS`, the agent:
 
 This catches stagnant branches that would accidentally destroy infrastructure.
 
-## PR Comment Templates
+## Prompts & Templates
 
-Comments are rendered from Markdown templates in `templates/`:
+The agent prompt lives in `prompts/`:
+
+- `pr-review.md` — system prompt sent to Claude with the diff, PR metadata, and template injected at runtime
+
+Output comment structure lives in `templates/`:
 
 - `pr-comment-with-terraform.md` — includes Terraform validation section
-- `pr-comment-without-terraform.md` — standard review (policy check + code analysis)
+- `pr-comment-without-terraform.md` — standard review
 
-The agent fills in template placeholders based on its findings.
+Both use `{PLACEHOLDER}` tokens filled via `.replace()` — edit them directly to change how reviews look or what Claude is asked to do.
 
 ## Deployment
 
@@ -119,6 +96,16 @@ cdk deploy --all
 See `deploy/` for the full CDK app (`app.py`, `stacks/agentcore_stack.py`, `stacks/lambda_stack.py`).
 
 > **Note:** CDK requires Node.js for the CLI (`npm install -g aws-cdk`). The `aws_bedrock_agentcore_alpha` module is alpha — pin the CDK version in `deploy/requirements.txt` to avoid API changes between upgrades.
+
+## Roadmap
+
+### CI failure analysis
+The agent currently fetches GitHub Actions logs to validate Terraform plans — the log download and parsing infrastructure (`github_client.get_actions_runs_for_sha`, `download_run_logs`, `extract_log_text`) is already in place. The next step is generalizing this to non-Terraform failures: detect failed workflow steps, extract relevant error lines, and include a root cause summary in the PR comment. No new GitHub API surface needed — it's a new node in the LangGraph graph consuming the same log pipeline.
+
+### Vector policy retrieval
+A RAG-based org policy checker is planned — Bedrock Titan Text Embeddings V2, in-memory numpy cosine similarity, cold-start indexing per Lambda container.
+
+---
 
 ## Troubleshooting
 
