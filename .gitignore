@@ -34,6 +34,7 @@ env/
 
 # CDK
 deploy/cdk.out/
+node_modules/
 
 # AgentCore
 .bedrock_agentcore/
