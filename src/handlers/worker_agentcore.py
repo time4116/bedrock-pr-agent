@@ -97,7 +97,6 @@ def _invoke_agent_for_pr(
             'terraform_validation_repos': os.environ.get('TERRAFORM_VALIDATION_REPOS', ''),
             'bedrock_model_id': os.environ.get('BEDROCK_MODEL_ID', ''),
             'github_secret_name': os.environ.get('GITHUB_SECRET_NAME', 'github-pr-agent/github'),
-            'org_policy_check_enabled': os.environ.get('ORG_POLICY_CHECK_ENABLED', 'false'),
         }
     }
 

@@ -9,6 +9,7 @@ import os
 import hmac
 import hashlib
 import boto3
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from src.utils.logger import logger
@@ -16,7 +17,43 @@ from src.utils.secrets import get_github_credentials
 from src.utils.config import is_repo_allowed
 
 sqs = boto3.client('sqs')
+s3 = boto3.client('s3')
 QUEUE_URL = os.environ.get('SQS_QUEUE_URL', '')
+
+_RATE_LIMIT_BUCKET = os.environ.get('RATE_LIMIT_BUCKET', '')
+_WEEKLY_LIMIT = int(os.environ.get('WEEKLY_REVIEW_LIMIT', '2'))
+
+
+def _check_rate_limit(repo: str) -> bool:
+    """Return True if the request is within the weekly limit, False if it should be dropped."""
+    if not _RATE_LIMIT_BUCKET:
+        return True
+
+    week = datetime.now(timezone.utc).strftime('%G-W%V')
+    key = f"{repo}.json"
+
+    try:
+        obj = s3.get_object(Bucket=_RATE_LIMIT_BUCKET, Key=key)
+        state = json.loads(obj['Body'].read())
+    except s3.exceptions.NoSuchKey:
+        state = {}
+    except Exception as e:
+        logger.warning('Rate limit read failed — allowing request', {'error': str(e)})
+        return True
+
+    if state.get('week') != week:
+        state = {'week': week, 'count': 0}
+
+    if state['count'] >= _WEEKLY_LIMIT:
+        return False
+
+    state['count'] += 1
+    try:
+        s3.put_object(Bucket=_RATE_LIMIT_BUCKET, Key=key, Body=json.dumps(state))
+    except Exception as e:
+        logger.warning('Rate limit write failed — allowing request', {'error': str(e)})
+
+    return True
 
 
 def verify_signature(payload: str, signature: str) -> bool:
@@ -80,7 +117,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.info('Ignoring event from non-allowed repo', {'repo': repo_full_name})
             return {'statusCode': 200, 'body': json.dumps({'message': 'Repository not in allowed list'})}
 
-        pr_number = payload.get('pull_request', {}).get('number')
+        if not _check_rate_limit(repo_full_name):
+            logger.info('Rate limit reached for repo', {'repo': repo_full_name, 'limit': _WEEKLY_LIMIT})
+            return {'statusCode': 200, 'body': json.dumps({'message': 'Weekly review limit reached'})}
+
+        pr = payload.get('pull_request', {})
+        pr_number = pr.get('number')
 
         logger.info('Queueing PR event for processing', {
             'repo': repo_full_name,
