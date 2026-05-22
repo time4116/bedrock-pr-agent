@@ -4,6 +4,7 @@ import aws_cdk as cdk
 from aws_cdk import (
     Stack,
     CfnOutput,
+    aws_bedrock as bedrock,
     aws_ecr_assets as ecr_assets,
     aws_iam as iam,
 )
@@ -306,6 +307,29 @@ class AgentCoreStack(Stack):
                 actions=["sts:GetWebIdentityToken"],
                 resources=["*"],
             )
+        )
+
+        source_model_arn = config.get(
+            "bedrock_source_model_arn",
+            f"arn:aws:bedrock:{region}::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0",
+        )
+
+        inference_profile = bedrock.CfnInferenceProfile(
+            self,
+            "ClaudeInferenceProfile",
+            inference_profile_name=f"pr-agent-{stage}-claude",
+            model_source=bedrock.CfnInferenceProfile.InferenceProfileModelSourceProperty(
+                copy_from=source_model_arn,
+            ),
+        )
+
+        self.inference_profile_arn = inference_profile.attr_inference_profile_arn
+
+        CfnOutput(
+            self,
+            "InferenceProfileArn",
+            value=self.inference_profile_arn,
+            export_name=f"GitHubPrAgent-{stage}-InferenceProfileArn",
         )
 
         runtime = agentcore.CfnRuntime(

@@ -6,6 +6,7 @@ from aws_cdk import (
     Stack,
     CfnOutput,
     aws_iam as iam,
+    aws_s3 as s3,
     aws_lambda as lambda_,
     aws_lambda_event_sources as lambda_event_sources,
     aws_logs as logs,
@@ -53,16 +54,25 @@ class LambdaStack(Stack):
             ),
         )
 
+        rate_limit_bucket = s3.Bucket(
+            self,
+            "RateLimitBucket",
+            bucket_name=f"github-pr-agent-{stage}-rate-limits-{account}",
+            removal_policy=cdk.RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+        )
+
         shared_env = {
             "GITHUB_SECRET_NAME": config["github_secret_name"],
             "BEDROCK_MODEL_ID": config["bedrock_model_id"],
             "ALLOWED_REPOS": config["allowed_repos"],
             "TERRAFORM_VALIDATION_REPOS": config["terraform_validation_repos"],
-            "ORG_POLICY_CHECK_ENABLED": config["org_policy_check_enabled"],
             "AGENT_ARN": agent_runtime_arn,
             "STAGE": stage,
             "LOG_LEVEL": config["log_level"],
             "SQS_QUEUE_URL": queue.queue_url,
+            "RATE_LIMIT_BUCKET": rate_limit_bucket.bucket_name,
+            "WEEKLY_REVIEW_LIMIT": config.get("weekly_review_limit", "2"),
         }
 
         webhook_role = iam.Role(
@@ -105,6 +115,14 @@ class LambdaStack(Stack):
                 sid="SQSSendAccess",
                 actions=["sqs:SendMessage"],
                 resources=[queue.queue_arn],
+            )
+        )
+
+        webhook_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="RateLimitBucketAccess",
+                actions=["s3:GetObject", "s3:PutObject"],
+                resources=[f"{rate_limit_bucket.bucket_arn}/*"],
             )
         )
 

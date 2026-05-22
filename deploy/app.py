@@ -15,14 +15,10 @@ stage = os.environ.get("STAGE", "dev")
 config = {
     "stage": stage,
     "github_secret_name": os.environ.get("GITHUB_SECRET_NAME", "github-pr-agent/github"),
-    "bedrock_model_id": os.environ.get(
-        "BEDROCK_MODEL_ID",
-        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0",
-    ),
     "allowed_repos": os.environ.get("ALLOWED_REPOS", ""),
     "terraform_validation_repos": os.environ.get("TERRAFORM_VALIDATION_REPOS", ""),
-    "org_policy_check_enabled": os.environ.get("ORG_POLICY_CHECK_ENABLED", "false"),
     "log_level": os.environ.get("LOG_LEVEL", "info"),
+    "weekly_review_limit": os.environ.get("WEEKLY_REVIEW_LIMIT", "2"),
 }
 
 agentcore_stack = AgentCoreStack(
@@ -31,6 +27,10 @@ agentcore_stack = AgentCoreStack(
     config=config,
     env=env,
 )
+
+# Use the inference profile created in AgentCoreStack so the Lambda passes the
+# correct ARN to the AgentCore container via the invocation payload.
+config["bedrock_model_id"] = agentcore_stack.inference_profile_arn
 
 LambdaStack(
     app,
