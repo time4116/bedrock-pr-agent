@@ -22,4 +22,4 @@
 
 ---
 
-<sub>Argus · AWS Bedrock AgentCore · automated review</sub>
+<sub>AWS Bedrock AgentCore · automated review</sub>

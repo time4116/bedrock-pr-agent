@@ -27,7 +27,7 @@ python scripts/create_github_app.py --org my-org --store-secret
 
 The script opens your browser to a pre-filled GitHub App creation page. Click **Create GitHub App**, and it captures the credentials automatically. The webhook URL is set to a placeholder — you'll update it in step 6.
 
-> **Manual alternative:** GitHub → Settings → Developer settings → GitHub Apps → New GitHub App. Permissions: Issues (read & write), Pull requests (read & write), Contents / Actions / Metadata (read). Subscribe to `pull_request` events. Generate a private key. Store as a JSON secret in Secrets Manager at `github-pr-agent/github`:
+> **Manual alternative:** GitHub → Settings → Developer settings → GitHub Apps → New GitHub App. Permissions: Issues (read & write), Pull requests (read & write), Contents / Actions / Metadata (read). Subscribe to `pull_request` events. The agent posts top-level PR timeline comments through GitHub's issue comments API, so **Issues: read & write is required** even though the comments appear on pull requests. Generate a private key. Store as a JSON secret in Secrets Manager at `github-pr-agent/github`:
 > ```json
 > {"app_id": "...", "webhook_secret": "...", "private_key": "..."}
 > ```
@@ -159,6 +159,8 @@ In the GitHub App settings:
 ## 8. Install the GitHub App on your repos
 
 GitHub App settings → **Install App** → select your org or specific repositories.
+
+If you change app permissions later, GitHub requires the installation owner to approve the updated permissions. After adding or changing permissions, return to **Install App** and review/approve the installation again before retrying webhooks.
 
 Repos you install on must appear in `ALLOWED_REPOS`, or leave that variable empty to allow all. Open a pull request to verify — the agent should post a review comment within a few minutes.
 
