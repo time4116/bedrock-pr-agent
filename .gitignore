@@ -66,9 +66,5 @@ Thumbs.db
 .ipynb_checkpoints/
 *.ipynb
 
-# Policies — org-specific documents; add your own .md files to policies/
-policies/*.txt
-policies/*.pdf
-
 # Design notes and planning docs
 todo/
