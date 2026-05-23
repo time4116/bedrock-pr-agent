@@ -121,8 +121,8 @@ class LambdaStack(Stack):
         webhook_role.add_to_policy(
             iam.PolicyStatement(
                 sid="RateLimitBucketAccess",
-                actions=["s3:GetObject", "s3:PutObject"],
-                resources=[f"{rate_limit_bucket.bucket_arn}/*"],
+                actions=["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+                resources=[rate_limit_bucket.bucket_arn, f"{rate_limit_bucket.bucket_arn}/*"],
             )
         )
 
