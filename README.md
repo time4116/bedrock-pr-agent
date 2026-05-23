@@ -102,9 +102,6 @@ See `deploy/` for the full CDK app (`app.py`, `stacks/agentcore_stack.py`, `stac
 ### CI failure analysis
 The agent currently fetches GitHub Actions logs to validate Terraform plans — the log download and parsing infrastructure (`github_client.get_actions_runs_for_sha`, `download_run_logs`, `extract_log_text`) is already in place. The next step is generalizing this to non-Terraform failures: detect failed workflow steps, extract relevant error lines, and include a root cause summary in the PR comment. No new GitHub API surface needed — it's a new node in the LangGraph graph consuming the same log pipeline.
 
-### Vector policy retrieval
-A RAG-based org policy checker is planned — Bedrock Titan Text Embeddings V2, in-memory numpy cosine similarity, cold-start indexing per Lambda container.
-
 ---
 
 ## Troubleshooting

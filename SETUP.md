@@ -91,14 +91,15 @@ The script prints the role ARN. Add the following to **GitHub → Settings → S
 | Type | Name | Value |
 |------|------|-------|
 | Secret | `AWS_DEPLOY_ROLE_ARN` | ARN printed above |
-| Variable | `AWS_ACCOUNT` | Your 12-digit account ID |
+| Secret | `AWS_ACCOUNT` | Your 12-digit account ID |
+| Secret | `GH_SECRET_NAME` | Secrets Manager secret name (default: `github-pr-agent/github`) |
 | Variable | `AWS_REGION` | e.g. `us-east-1` |
 | Variable | `STAGE` | `prod` |
-| Variable | `ALLOWED_REPOS` | Comma-separated `owner/repo`, or leave empty |
+| Variable | `ALLOWED_REPOS` | Comma-separated `owner/repo` (e.g. `time4116/bedrock-pr-agent`), or leave empty to allow all |
 | Variable | `TERRAFORM_VALIDATION_REPOS` | Comma-separated repos, or leave empty |
 | Variable | `WEEKLY_REVIEW_LIMIT` | `2` |
 
-`GITHUB_SECRET_NAME` and `LOG_LEVEL` fall back to sensible defaults.
+`LOG_LEVEL` falls back to `info` if not set.
 
 ---
 
@@ -124,8 +125,7 @@ CDK builds the AgentCore Docker image, pushes it to ECR, and creates all infrast
 
 | Resource | Name |
 |----------|------|
-| AgentCore Runtime | `pr-agent-{stage}` |
-| Bedrock inference profile | `pr-agent-{stage}-claude` (cross-region Claude Sonnet 4) |
+| AgentCore Runtime | `pr_agent_{stage}` |
 | Webhook Lambda | `github-pr-agent-{stage}-webhook` |
 | Worker Lambda | `github-pr-agent-{stage}-worker` |
 | SQS queue + DLQ | `github-pr-agent-{stage}-pr-analysis` |

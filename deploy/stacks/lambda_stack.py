@@ -142,7 +142,7 @@ class LambdaStack(Stack):
             iam.PolicyStatement(
                 sid="AgentCoreInvokeAccess",
                 actions=["bedrock-agentcore:InvokeAgentRuntime"],
-                resources=[agent_runtime_arn],
+                resources=[agent_runtime_arn, f"{agent_runtime_arn}/*"],
             )
         )
 
@@ -185,7 +185,7 @@ class LambdaStack(Stack):
             self,
             "WebhookLogGroup",
             log_group_name=f"/aws/lambda/github-pr-agent-{stage}-webhook",
-            retention=logs.RetentionDays.ONE_MONTH,
+            retention=logs.RetentionDays.ONE_WEEK,
             removal_policy=cdk.RemovalPolicy.RETAIN,
         )
 
@@ -193,7 +193,7 @@ class LambdaStack(Stack):
             self,
             "WorkerLogGroup",
             log_group_name=f"/aws/lambda/github-pr-agent-{stage}-worker",
-            retention=logs.RetentionDays.ONE_MONTH,
+            retention=logs.RetentionDays.ONE_WEEK,
             removal_policy=cdk.RemovalPolicy.RETAIN,
         )
 
