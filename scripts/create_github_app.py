@@ -46,7 +46,7 @@ def build_manifest(name: str, port: int) -> dict:
         "public": False,
         "default_permissions": {
             "issues": "write",
-            "pull_requests": "read",
+            "pull_requests": "write",
             "contents": "read",
             "actions": "read",
             "metadata": "read",
