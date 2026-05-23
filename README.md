@@ -1,51 +1,85 @@
 # Bedrock PR Agent
 
-A GitHub App that automatically reviews pull requests using Claude Sonnet 4.6 (claude-sonnet-4-6) via AWS Bedrock. Deployed on AWS — it reviews PRs on this repo automatically.
+_A serverless automation harness for configurable PR review, infrastructure validation, and AI-assisted engineering workflows on AWS Bedrock._
 
-Built on Bedrock AgentCore Runtime with a LangGraph StateGraph, it validates whether the diff matches what the author said they did and optionally validates Terraform plans. Responds to every `pull_request` event and posts a structured comment within minutes.
+The current implementation runs as a GitHub App on AWS and uses Anthropic Claude models through Bedrock. It receives pull request events, queues work through SQS, invokes a Bedrock AgentCore/LangGraph review workflow, and updates a single persistent PR comment with concise findings.
+
+The architecture is intentionally modular: prompts, templates, validation tools, and review logic can be swapped per repository, team, or workflow. The same repository is used as the initial deployment target, so changes to the project exercise the deployed review workflow end to end.
+
+## Overview
+
+Bedrock PR Agent is designed as a reusable foundation for workflow-specific engineering automation. The default workflow reviews pull requests by comparing the PR description against the actual diff, optionally incorporating Terraform plan output, and publishing a concise Markdown comment back to the PR.
+
+The project focuses on the operational pieces that matter for real automation:
+
+- verified GitHub webhook handling
+- asynchronous event processing through SQS
+- Bedrock AgentCore runtime execution for longer-running review work
+- repository allowlisting and weekly rate limits
+- idempotent PR comments instead of duplicate bot spam
+- configurable prompts, templates, and validation logic
+- GitHub Actions deployment through AWS CDK
+
+## How it works
+
+On each accepted pull request event, the agent fetches the diff, applies any configured validation tools, asks Bedrock for a concise review, and updates a single persistent PR comment.
+
+At runtime:
+
+1. GitHub sends a `pull_request` webhook to API Gateway.
+2. The webhook Lambda validates the HMAC signature, checks the repository allowlist, applies the weekly rate limit, and enqueues accepted events to SQS.
+3. The worker Lambda invokes the Bedrock AgentCore runtime.
+4. A LangGraph workflow fetches the PR diff, optionally parses Terraform plan logs, and builds a prompt from the configured template.
+5. Bedrock generates concise actionable findings.
+6. The GitHub client creates or updates a marked PR timeline comment.
+
+The analysis question is intentionally narrow: **does the code diff match what the PR description says it does?** External ticket systems are not required.
+
+Terraform validation is one example of workflow-specific logic plugged into the harness. For repositories listed in `TERRAFORM_VALIDATION_REPOS`, the agent downloads GitHub Actions logs for the PR head SHA, parses Terraform plan output, and flags material infrastructure risk such as deletes or forced replacements.
 
 ## Architecture
 
-```
-GitHub PR Event
-      │
-      ▼
-API Gateway ──► Webhook Lambda  (validates HMAC signature, filters repos, <1s response)
-                      │
-                      ▼ SQS
-               Worker Lambda   (triggers AgentCore Runtime)
-                      │
-                      ▼
-            AgentCore Runtime  (containerized LangGraph agent — no Lambda timeout)
-            ┌──────────────────────────────────────┐
-            │  Node 1: fetch_diff                  │
-            │  Node 2: validate_terraform (optional)│
-            │  Node 3: analyze_and_comment         │
-            └──────────────────────────────────────┘
-                      │
-                      ▼
-              GitHub PR Comment
+```mermaid
+flowchart TD
+    A[GitHub pull request event] --> B[API Gateway]
+    B --> C[Webhook Lambda]
+    C --> C1[Validate HMAC signature]
+    C1 --> C2[Filter allowed repositories]
+    C2 --> C3[Check weekly rate limit]
+    C3 --> D[(S3 rate limit state)]
+    C3 --> E[SQS queue]
+    E --> F[Worker Lambda]
+    F --> G[Bedrock AgentCore Runtime]
+    G --> H[LangGraph review workflow]
+    H --> I[Fetch PR diff]
+    H --> J[Optional Terraform validation]
+    H --> K[Analyze diff and generate review]
+    K --> L[Create or update GitHub PR comment]
+    E --> M[SQS dead-letter queue]
 ```
 
-**Why this architecture?**
+CDK deploys the system as two stacks:
 
-- **Async SQS queue** — Webhook returns `202 Accepted` in <1s. GitHub has a 10s delivery timeout; Claude analysis takes minutes.
-- **AgentCore container runtime** — No Lambda timeout limits (15-min Lambda max is hit on large diffs). Container also eliminates dependency packaging issues.
-- **Single GitHub secret** — All credentials (App ID, webhook secret, private key) stored in AWS Secrets Manager with automatic caching.
+- `AgentCoreStack` builds the container image, pushes it to ECR, and creates the Bedrock AgentCore runtime.
+- `LambdaStack` creates API Gateway, webhook and worker Lambdas, SQS queue and DLQ, S3 rate-limit bucket, and the required IAM wiring.
 
-## What the Agent Does
+## Operational design
 
-On every `pull_request` event (`opened`, `synchronize`, `edited`):
+### Async queueing
 
-1. **Fetches the PR diff** — unified diff of all changed files, truncated at token limits with smart prioritization
-2. **Validates Terraform plans** *(optional, per-repo)* — downloads GitHub Actions log archive for the PR's head SHA, parses Terraform plan output, flags resource deletions and `must be replaced` operations
-3. **Posts a structured comment** — creates or updates a single bot comment (identified by HTML marker) with findings formatted via Markdown templates
+GitHub webhooks need a fast response, while model-backed review can take minutes. The webhook Lambda validates and enqueues the request, then returns quickly. The worker Lambda and AgentCore runtime handle the long-running work off the request path.
 
-The analysis question is: **does the code diff match what the PR description says it does?** No external ticket system required.
+### Idempotent comments
 
-## Setup
+The bot writes one persistent PR timeline comment marked with a hidden HTML marker. Later runs update that comment instead of appending a new one, which keeps repeated webhook deliveries, retries, and PR updates from creating duplicate review noise.
 
-See [SETUP.md](SETUP.md) for the full end-to-end guide: GitHub App creation, Secrets Manager, Bedrock model access, CDK deploy, and webhook configuration. Once deployed and installed on your repos, any new PR triggers an automatic review comment.
+### Weekly rate limits
+
+Rate limits are stored in S3 as per-repository JSON state and enforced before work is queued. `WEEKLY_REVIEW_LIMIT` defaults to `2`, which keeps model spend predictable and prevents noisy automation from reviewing every event indefinitely.
+
+### Configurable review logic
+
+Prompts live in `prompts/`, comment templates live in `templates/`, and validation steps are implemented as graph nodes/tools. The default implementation includes PR diff review and optional Terraform plan parsing, but the same shape can support other repository, team, or workflow-specific checks.
 
 ## Configuration
 
@@ -53,72 +87,59 @@ All configuration is via environment variables. See `.env.example` for the full 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GITHUB_SECRET_NAME` | `github-pr-agent/github` | Secrets Manager secret with `app_id`, `webhook_secret`, `private_key` |
-| `BEDROCK_MODEL_ID` | *(required)* | Bedrock model ID or inference profile ARN. For GitHub Actions deploys, store this as a repository secret. |
-| `ALLOWED_REPOS` | *(empty = all)* | Comma-separated `owner/repo` filter |
-| `TERRAFORM_VALIDATION_REPOS` | *(empty)* | Repos that get Terraform plan analysis |
-| `STAGE` | `dev` | Deployment stage; used to namespace all AWS resource names |
-
-## Terraform Plan Validation
-
-For repos listed in `TERRAFORM_VALIDATION_REPOS`, the agent:
-
-1. Finds the most recent completed GitHub Actions run for the PR's head SHA
-2. Downloads the log archive (ZIP)
-3. Parses `Terraform will perform the following actions:` sections
-4. Flags resource deletions (`will be destroyed`) and forced replacements (`must be replaced`)
-
-This catches stagnant branches that would accidentally destroy infrastructure.
-
-## Prompts & Templates
-
-The agent prompt lives in `prompts/`:
-
-- `pr-review.md` — system prompt sent to Claude with the diff, PR metadata, and template injected at runtime
-
-Output comment structure lives in `templates/`:
-
-- `pr-comment-with-terraform.md` — includes Terraform validation section
-- `pr-comment-without-terraform.md` — standard review
-
-Both use `{PLACEHOLDER}` tokens filled via `.replace()` — edit them directly to change how reviews look or what Claude is asked to do.
+| `GITHUB_SECRET_NAME` | `github-pr-agent/github` | Secrets Manager secret with `app_id`, `webhook_secret`, and `private_key` |
+| `BEDROCK_MODEL_ID` | _required_ | Bedrock model ID or inference profile ARN used by the review agent. The current runtime is configured for Anthropic Claude models through Bedrock. For GitHub Actions deploys, store this as a repository secret. |
+| `ALLOWED_REPOS` | _empty = all_ | Comma-separated `owner/repo` allowlist |
+| `TERRAFORM_VALIDATION_REPOS` | _empty_ | Repositories that get Terraform plan analysis |
+| `WEEKLY_REVIEW_LIMIT` | `2` | Maximum accepted review events per repository per ISO week |
+| `STAGE` | `dev` | Deployment stage used to namespace AWS resource names |
 
 ## Deployment
 
-Single command deploys everything — AgentCore Runtime (Docker image → ECR), Lambda functions, SQS queue, and API Gateway:
+Deployment is designed to run through GitHub Actions after the one-time AWS and GitHub prerequisites are in place.
 
-```bash
-cd deploy
-pip install -r requirements.txt
-cdk deploy --all
-```
+The setup scripts handle the parts that are easiest to automate safely:
 
-See `deploy/` for the full CDK app (`app.py`, `stacks/agentcore_stack.py`, `stacks/lambda_stack.py`).
+- `scripts/create_github_app.py` starts the GitHub App creation flow and stores app credentials in AWS Secrets Manager.
+- `scripts/create_deploy_role.py` creates the GitHub Actions OIDC deploy role and prints the ARN for repository configuration.
 
-> **Note:** CDK requires Node.js for the CLI (`npm install -g aws-cdk`). The `aws_bedrock_agentcore_alpha` module is alpha — pin the CDK version in `deploy/requirements.txt` to avoid API changes between upgrades.
+Manual setup is still required for Bedrock model access, CDK bootstrap, repository secrets and variables, the final webhook URL, and GitHub App installation approval. See [SETUP.md](SETUP.md) for the full step-by-step runbook.
 
-## Roadmap
+Once configured, pushes to `main` run the deployment workflow and execute `cdk deploy --all` through GitHub Actions.
 
-### CI failure analysis
-The agent currently fetches GitHub Actions logs to validate Terraform plans — the log download and parsing infrastructure (`github_client.get_actions_runs_for_sha`, `download_run_logs`, `extract_log_text`) is already in place. The next step is generalizing this to non-Terraform failures: detect failed workflow steps, extract relevant error lines, and include a root cause summary in the PR comment. No new GitHub API surface needed — it's a new node in the LangGraph graph consuming the same log pipeline.
+## Operations and troubleshooting
 
----
+Start with GitHub App **Advanced → Recent Deliveries**. It shows the exact webhook payload, response status, and delivery errors, which quickly narrows the issue to GitHub delivery, the webhook Lambda, or downstream processing.
 
-## Troubleshooting
+Then check CloudWatch logs in this order:
 
-> **Tip:** Check the GitHub App's **Advanced → Recent Deliveries** page first — it shows exactly what GitHub sent and what response it got back, which narrows down whether the issue is at the webhook, Lambda, or AgentCore layer.
+1. webhook Lambda
+2. worker Lambda
+3. Bedrock AgentCore runtime
 
-### Duplicate comments
-**Symptom:** Bot posts the same comment multiple times.
+Common issues:
 
-**Root cause:** Worker Lambda `boto3` read timeout (60s default) is shorter than AgentCore processing time (5–10 min). SQS message becomes visible again → new Lambda invocation → second comment.
+- **No comment posted**
+  - Verify the GitHub App webhook is active and points to the deployed `WebhookUrl`.
+  - Verify the repository is included in `ALLOWED_REPOS`, or leave the allowlist empty to allow all installed repositories.
+  - If logs show `Resource not accessible by integration`, confirm the GitHub App has **Issues: read & write** and that the installation owner approved the updated permissions. Top-level PR timeline comments use GitHub's issue comments API.
 
-**Fix applied:** `boto3` read timeout increased to 900s, idempotent create-or-update in `github_commenter` (HTML marker identifies the bot comment), Worker Lambda timeout 15 min, SQS visibility timeout 20 min.
+- **Duplicate comments**
+  - The bot should update an existing marked comment instead of creating new comments. If duplicates appear, check worker timeout/retry behavior, SQS visibility timeout, and whether the existing comment still contains the hidden marker.
 
-### No comment posted
-1. Check CloudWatch logs: webhook Lambda → worker Lambda → AgentCore runtime
-2. Verify repo is in `ALLOWED_REPOS`
-3. Check GitHub webhook delivery logs in App settings
-4. Verify `ALLOWED_REPOS` uses `owner/repo` format (e.g. `time4116/bedrock-pr-agent`)
-5. If the worker logs `Resource not accessible by integration` while creating an issue comment, verify the GitHub App has **Issues: read & write** and that the installation owner approved the updated permissions. Top-level PR timeline comments use GitHub's issue comments API.
+- **Rate limit reached**
+  - The default limit is `2` accepted review events per repository per week.
+  - Rate-limit state is stored in the S3 bucket named `github-pr-agent-{stage}-rate-limits-{account}` with object keys like `owner/repo.json`.
+  - Deleting that object resets the counter for the repository.
 
+- **Unexpected model cost**
+  - Keep `WEEKLY_REVIEW_LIMIT` conservative.
+  - Review diff truncation and prompt size before raising limits.
+  - The agent is tuned for concise output with a bounded response token budget.
+
+## Extension points
+
+- **CI failure analysis** — reuse the existing GitHub Actions log download/parsing path to summarize failed jobs and likely root causes.
+- **Repository profiles** — select different prompts, templates, validation tools, and severity thresholds per repository.
+- **Policy checks** — plug in workflow-specific checks for infrastructure, deployment safety, dependency changes, or security-sensitive paths.
+- **Cost controls** — add stronger token/diff budgeting and optional skip rules for low-risk changes.
