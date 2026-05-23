@@ -27,7 +27,7 @@ python scripts/create_github_app.py --org my-org --store-secret
 
 The script opens your browser to a pre-filled GitHub App creation page. Click **Create GitHub App**, and it captures the credentials automatically. The webhook URL is set to a placeholder — you'll update it in step 6.
 
-> **Manual alternative:** GitHub → Settings → Developer settings → GitHub Apps → New GitHub App. Permissions: Issues (write), Pull requests / Contents / Actions / Metadata (read). Subscribe to `pull_request` events. Generate a private key. Store as a JSON secret in Secrets Manager at `github-pr-agent/github`:
+> **Manual alternative:** GitHub → Settings → Developer settings → GitHub Apps → New GitHub App. Permissions: Issues (read & write), Pull requests (read & write), Contents / Actions / Metadata (read). Subscribe to `pull_request` events. Generate a private key. Store as a JSON secret in Secrets Manager at `github-pr-agent/github`:
 > ```json
 > {"app_id": "...", "webhook_secret": "...", "private_key": "..."}
 > ```
