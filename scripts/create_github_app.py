@@ -12,6 +12,7 @@ Usage:
     python scripts/create_github_app.py --name my-pr-agent
     python scripts/create_github_app.py --org my-org
     python scripts/create_github_app.py --store-secret
+    python scripts/create_github_app.py --print-credentials
     python scripts/create_github_app.py --store-secret --region us-west-2
 
 Requirements:
@@ -31,7 +32,8 @@ import requests
 
 DEFAULT_APP_NAME = "pr-agent"
 DEFAULT_PORT = 3456
-SECRET_NAME = "github-pr-agent/github"
+# Secrets Manager path, not a credential.
+SECRET_NAME = "github-pr-agent/github"  # nosec: B105
 
 
 def build_manifest(name: str, port: int) -> dict:
@@ -106,7 +108,7 @@ def run_local_server(manifest: dict, github_url: str, port: int) -> str:
         def log_message(self, *_args):
             pass  # suppress request logs
 
-    server = http.server.HTTPServer(("0.0.0.0", port), Handler)
+    server = http.server.HTTPServer(("127.0.0.1", port), Handler)
     t = threading.Thread(target=server.serve_forever)
     t.daemon = True
     t.start()
@@ -161,11 +163,19 @@ def main() -> None:
                         help=f"Local callback port (default: {DEFAULT_PORT})")
     parser.add_argument("--store-secret", action="store_true",
                         help="Store credentials in AWS Secrets Manager after creation")
+    parser.add_argument("--print-credentials", action="store_true",
+                        help="Print generated webhook secret/private key to stdout instead of storing them")
     parser.add_argument("--secret-name", default=SECRET_NAME,
                         help=f"Secrets Manager secret name (default: {SECRET_NAME})")
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-east-1"),
                         help="AWS region for Secrets Manager (default: us-east-1)")
     args = parser.parse_args()
+
+    if not args.store_secret and not args.print_credentials:
+        parser.error(
+            "choose --store-secret or --print-credentials. For public repos and shared terminals, "
+            "prefer --store-secret so generated credentials are not printed."
+        )
 
     if args.org:
         github_url = f"https://github.com/organizations/{args.org}/settings/apps/new"
@@ -189,13 +199,13 @@ def main() -> None:
 
     print(f"\nApp created: {html_url}")
     print(f"  App ID         : {app_id}")
-    print(f"  Webhook secret : {webhook_secret}")
+    print(f"  Webhook secret : {'stored in Secrets Manager' if args.store_secret else 'generated'}")
 
     if args.store_secret:
         print(f"\nStoring credentials in Secrets Manager...")
         store_in_secrets_manager(credentials, args.secret_name, args.region)
         print("\nNext: run 'cdk deploy --all', then update the webhook URL in GitHub App settings.")
-    else:
+    elif args.print_credentials:
         print("\nCredentials not stored. Re-run with --store-secret, or store manually:")
         print(f"\n  python scripts/create_github_app.py --store-secret\n")
         print("Private key (save this):")

@@ -65,7 +65,12 @@ def get_github_credentials() -> Dict[str, str]:
     """
     pat = os.environ.get('GITHUB_TOKEN')
     if pat:
-        return {'app_id': '', 'webhook_secret': '', 'private_key': '', 'token': pat}
+        return {
+            'app_id': '',
+            'webhook_secret': '',  # nosec B105
+            'private_key': '',  # nosec B105
+            'token': pat,
+        }
 
     secret_name = os.environ.get('GITHUB_SECRET_NAME', 'github-pr-agent/github')
     secret = get_secret(secret_name)
