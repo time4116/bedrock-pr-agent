@@ -1,6 +1,6 @@
 # Bedrock PR Agent
 
-A GitHub App that automatically reviews pull requests using Claude Sonnet 4.6 via AWS Bedrock. Deployed on AWS — it reviews PRs on this repo automatically.
+A GitHub App that automatically reviews pull requests using Claude Sonnet 4.6 (claude-sonnet-4-6) via AWS Bedrock. Deployed on AWS — it reviews PRs on this repo automatically.
 
 Built on Bedrock AgentCore Runtime with a LangGraph StateGraph, it validates whether the diff matches what the author said they did and optionally validates Terraform plans. Responds to every `pull_request` event and posts a structured comment within minutes.
 
@@ -120,3 +120,5 @@ The agent currently fetches GitHub Actions logs to validate Terraform plans — 
 2. Verify repo is in `ALLOWED_REPOS`
 3. Check GitHub webhook delivery logs in App settings
 4. Verify `ALLOWED_REPOS` uses `owner/repo` format (e.g. `time4116/bedrock-pr-agent`)
+5. If the worker logs `Resource not accessible by integration` while creating an issue comment, verify the GitHub App has **Issues: read & write** and that the installation owner approved the updated permissions. Top-level PR timeline comments use GitHub's issue comments API.
+
