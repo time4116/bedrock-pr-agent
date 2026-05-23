@@ -106,6 +106,8 @@ The agent currently fetches GitHub Actions logs to validate Terraform plans — 
 
 ## Troubleshooting
 
+> **Tip:** Check the GitHub App's **Advanced → Recent Deliveries** page first — it shows exactly what GitHub sent and what response it got back, which narrows down whether the issue is at the webhook, Lambda, or AgentCore layer.
+
 ### Duplicate comments
 **Symptom:** Bot posts the same comment multiple times.
 
