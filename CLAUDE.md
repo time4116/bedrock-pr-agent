@@ -12,14 +12,6 @@ mypy src/
 ```
 Fix formatting: `black .`
 
-### Local PR review (no Lambda/AgentCore needed)
-```bash
-GITHUB_TOKEN=ghp_... PR_URL=https://github.com/org/repo/pull/123 python scripts/run_local.py
-# Print review without posting:
-DRY_RUN=true GITHUB_TOKEN=ghp_... PR_URL=... python scripts/run_local.py
-```
-AWS credentials are required (Bedrock is called directly). `GITHUB_TOKEN` bypasses the GitHub App entirely and uses a PAT.
-
 ### Deploy
 ```bash
 cd deploy
@@ -54,7 +46,7 @@ API Gateway → Webhook Lambda  (HMAC validation, repo filter, rate limit → SQ
 - `AgentCoreStack` (`deploy/stacks/agentcore_stack.py`) — builds the Docker image, pushes to ECR, creates the AgentCore Runtime and a cross-region Claude Sonnet Bedrock inference profile.
 - `LambdaStack` (`deploy/stacks/lambda_stack.py`) — API Gateway, Webhook Lambda, Worker Lambda, SQS queue, S3 rate-limit bucket. Receives the AgentCore ARN and inference profile ARN from `AgentCoreStack` as outputs.
 
-**AgentCore entrypoint:** `pr_agent.py` (root). The LangGraph business logic lives in `src/agent/graph.py` and is imported by both `pr_agent.py` (AgentCore) and `scripts/run_local.py` (local).
+**AgentCore entrypoint:** `pr_agent.py` (root). The LangGraph business logic lives in `src/agent/graph.py`.
 
 ## LangGraph Graph (`src/agent/graph.py`)
 
