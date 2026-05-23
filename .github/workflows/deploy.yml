@@ -3,15 +3,59 @@ name: Deploy
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  deploy:
+  verify:
+    name: Test and security checks
     runs-on: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Run unit tests
+        run: |
+          python3 -m unittest \
+            tests.test_config_security \
+            tests.test_public_repo_safety \
+            tests.test_github_comment_idempotency \
+            tests.test_pr_diff_fetcher \
+            -v
+
+      - name: Compile Python sources
+        run: |
+          python3 -m compileall -q \
+            src \
+            pr_agent.py \
+            deploy \
+            scripts/create_github_app.py \
+            scripts/create_deploy_role.py \
+            tests
+
+      - name: Run Bandit static security scan
+        run: uvx bandit -q -r src scripts deploy pr_agent.py -x tests
+
+      - name: Audit Python dependencies
+        run: uv tool run --python 3.12 --from pip-audit pip-audit -r requirements.txt
+
+  deploy:
+    needs: verify
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
