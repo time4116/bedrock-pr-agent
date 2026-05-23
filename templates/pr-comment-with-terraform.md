@@ -10,13 +10,13 @@
 
 ---
 
-### Findings
+### Actionable findings
 
-{REQUIREMENTS_ANALYSIS}
+{ACTIONABLE_FINDINGS}
 
 ---
 
-### Infrastructure Changes
+### Infrastructure changes
 
 {TERRAFORM_ENVIRONMENT_ANALYSIS}
 
