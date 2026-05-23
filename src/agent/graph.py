@@ -1,8 +1,5 @@
 """
 LangGraph PR review agent — business logic, independent of the AgentCore runtime.
-
-Importable without BedrockAgentCoreApp so the local runner (scripts/run_local.py)
-can invoke the graph directly without an AgentCore environment.
 """
 import os
 from pathlib import Path
