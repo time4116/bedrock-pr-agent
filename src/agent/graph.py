@@ -122,7 +122,10 @@ def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
         .replace('{REVIEW_TEMPLATE}', template)
     )
 
-    model_id = os.getenv('BEDROCK_MODEL_ID', 'REDACTED_BEDROCK_INFERENCE_PROFILE')
+    model_id = os.getenv('BEDROCK_MODEL_ID')
+    if not model_id:
+        raise ValueError('BEDROCK_MODEL_ID must be set to a Bedrock model ID or inference profile ARN')
+
     llm = ChatBedrockConverse(model=model_id, provider="anthropic", temperature=0.3, max_tokens=4096)
 
     logger.info('Calling Bedrock for PR analysis', {
