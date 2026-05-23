@@ -98,7 +98,7 @@ def run_local_server(manifest: dict, github_url: str, port: int) -> str:
                     self.wfile.write(_done_html())
                     done.set()
                 else:
-                    self.wfile.write(b"<html><body>Missing code — something went wrong.</body></html>")
+                    self.wfile.write(b"<html><body>Missing code - something went wrong.</body></html>")
             else:
                 self.send_response(404)
                 self.end_headers()
@@ -106,7 +106,7 @@ def run_local_server(manifest: dict, github_url: str, port: int) -> str:
         def log_message(self, *_args):
             pass  # suppress request logs
 
-    server = http.server.HTTPServer(("localhost", port), Handler)
+    server = http.server.HTTPServer(("0.0.0.0", port), Handler)
     t = threading.Thread(target=server.serve_forever)
     t.daemon = True
     t.start()

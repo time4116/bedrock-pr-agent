@@ -47,7 +47,7 @@ def ensure_oidc_provider(iam, account_id: str) -> None:
         print('OIDC provider already exists.')
         return
     except ClientError as e:
-        if e.response['Error']['Code'] != 'NoSuchEntityException':
+        if e.response['Error']['Code'] != 'NoSuchEntity':
             raise
 
     print('Creating GitHub Actions OIDC provider...')
@@ -214,7 +214,7 @@ def create_or_update_role(iam, role_name: str, trust_policy: dict) -> str:
         )
         return role['Arn']
     except ClientError as e:
-        if e.response['Error']['Code'] != 'NoSuchEntityException':
+        if e.response['Error']['Code'] != 'NoSuchEntity':
             raise
 
     print(f'Creating role: {role_name}')
