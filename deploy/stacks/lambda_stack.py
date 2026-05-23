@@ -142,7 +142,7 @@ class LambdaStack(Stack):
             iam.PolicyStatement(
                 sid="AgentCoreInvokeAccess",
                 actions=["bedrock-agentcore:InvokeAgentRuntime"],
-                resources=[agent_runtime_arn],
+                resources=[agent_runtime_arn, f"{agent_runtime_arn}/*"],
             )
         )
 
