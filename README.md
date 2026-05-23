@@ -1,6 +1,6 @@
 # Bedrock PR Agent
 
-A GitHub App that automatically reviews pull requests using Claude Sonnet 4 via AWS Bedrock. Deployed on AWS — it reviews PRs on this repo automatically.
+A GitHub App that automatically reviews pull requests using Claude Sonnet 4.6 via AWS Bedrock. Deployed on AWS — it reviews PRs on this repo automatically.
 
 Built on Bedrock AgentCore Runtime with a LangGraph StateGraph, it validates whether the diff matches what the author said they did and optionally validates Terraform plans. Responds to every `pull_request` event and posts a structured comment within minutes.
 
