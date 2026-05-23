@@ -123,7 +123,7 @@ def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
     )
 
     model_id = os.getenv('BEDROCK_MODEL_ID', 'arn:aws:bedrock:us-west-2:322264632107:inference-profile/global.anthropic.claude-sonnet-4-6')
-    llm = ChatBedrockConverse(model=model_id, model_provider="anthropic", temperature=0.3, max_tokens=4096)
+    llm = ChatBedrockConverse(model=model_id, provider="anthropic", temperature=0.3, max_tokens=4096)
 
     logger.info('Calling Bedrock for PR analysis', {
         'pr_number': pr_number,
