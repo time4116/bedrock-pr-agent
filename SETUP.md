@@ -56,7 +56,7 @@ Edit `.env` and set at minimum:
 | `AWS_ACCOUNT` | Your 12-digit AWS account ID |
 | `AWS_REGION` | e.g. `us-east-1` |
 | `BEDROCK_MODEL_ID` | Bedrock model ID or inference profile ARN |
-| `ALLOWED_REPOS` | Comma-separated `owner/repo` list, or leave empty to allow all |
+| `ALLOWED_REPOS` | Required comma-separated `owner/repo` list. Empty rejects all repositories; use `*` only if allowing every installed repository is intentional. |
 
 For GitHub Actions deploys, store `BEDROCK_MODEL_ID` as a repository secret. For
 local deploys/runs, export it in your shell or set it in `.env`.
@@ -99,7 +99,7 @@ The script prints the role ARN. Add the following to **GitHub → Settings → S
 | Secret | `BEDROCK_MODEL_ID` | Bedrock model ID or inference profile ARN |
 | Variable | `AWS_REGION` | e.g. `us-east-1` |
 | Variable | `STAGE` | `prod` |
-| Variable | `ALLOWED_REPOS` | Comma-separated `owner/repo` (e.g. `time4116/bedrock-pr-agent`), or leave empty to allow all |
+| Variable | `ALLOWED_REPOS` | Required comma-separated `owner/repo` (e.g. `time4116/bedrock-pr-agent`). Empty rejects all repositories; use `*` only if allowing every installed repository is intentional. |
 | Variable | `TERRAFORM_VALIDATION_REPOS` | Comma-separated repos, or leave empty |
 | Variable | `WEEKLY_REVIEW_LIMIT` | `2` |
 
@@ -162,5 +162,5 @@ GitHub App settings → **Install App** → select your org or specific reposito
 
 If you change app permissions later, GitHub requires the installation owner to approve the updated permissions. After adding or changing permissions, return to **Install App** and review/approve the installation again before retrying webhooks.
 
-Repos you install on must appear in `ALLOWED_REPOS`, or leave that variable empty to allow all. Open a pull request to verify — the agent should post a review comment within a few minutes.
+Repos you install on must appear in `ALLOWED_REPOS`. An empty allowlist rejects all repositories; set `*` only when reviewing every installed repository is intentional. Open a pull request to verify — the agent should post a review comment within a few minutes.
 

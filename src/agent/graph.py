@@ -2,6 +2,7 @@
 LangGraph PR review agent — business logic, independent of the AgentCore runtime.
 """
 import os
+import contextlib
 from pathlib import Path
 from typing import Any, Dict, Literal
 
@@ -56,6 +57,9 @@ def node_fetch_diff(state: PRReviewState) -> Dict[str, Any]:
                 diff_content = f.read()
         except Exception as e:
             return {'error': f'Could not read diff file: {e}'}
+        finally:
+            with contextlib.suppress(OSError):
+                os.unlink(diff_file)
 
     return {
         'pr_diff': diff_content,
