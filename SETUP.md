@@ -95,7 +95,7 @@ The script prints the role ARN. Add the following to **GitHub → Settings → S
 | Secret | `GH_SECRET_NAME` | Secrets Manager secret name (default: `github-pr-agent/github`) |
 | Variable | `AWS_REGION` | e.g. `us-east-1` |
 | Variable | `STAGE` | `prod` |
-| Variable | `ALLOWED_REPOS` | Comma-separated `owner/repo`, or leave empty |
+| Variable | `ALLOWED_REPOS` | Comma-separated `owner/repo` (e.g. `time4116/bedrock-pr-agent`), or leave empty to allow all |
 | Variable | `TERRAFORM_VALIDATION_REPOS` | Comma-separated repos, or leave empty |
 | Variable | `WEEKLY_REVIEW_LIMIT` | `2` |
 
