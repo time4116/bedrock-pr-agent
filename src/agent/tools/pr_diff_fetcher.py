@@ -60,23 +60,27 @@ def fetch_pr_diff(
         additions = pr.additions
         deletions = pr.deletions
         
-        # Fetch the diff using GitHub API
-        # PyGithub doesn't have direct diff support, so we use raw HTTP request
-        import requests
-        from src.services.github_client import GitHubClient
+        # Build a unified diff from the authenticated PR files API. This avoids
+        # the raw diff media-type request, which can fail independently of the
+        # PyGithub installation-token flow used for the rest of the agent.
+        diff_parts = []
+        for pr_file in pr.get_files():
+            previous_filename = getattr(pr_file, 'previous_filename', None)
+            old_path = previous_filename or pr_file.filename
+            new_path = pr_file.filename
+            diff_parts.append(f"diff --git a/{old_path} b/{new_path}")
+            diff_parts.append(f"--- a/{old_path}")
+            diff_parts.append(f"+++ b/{new_path}")
+            patch = getattr(pr_file, 'patch', None)
+            if patch:
+                diff_parts.append(patch)
+            else:
+                diff_parts.append(
+                    f"# {pr_file.status} file with no text patch returned by GitHub "
+                    f"(+{pr_file.additions}/-{pr_file.deletions})"
+                )
 
-        token = GitHubClient(installation_id).get_installation_token()
-
-        diff_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Accept': 'application/vnd.github.v3.diff'
-        }
-        
-        response = requests.get(diff_url, headers=headers, timeout=30)
-        response.raise_for_status()
-        
-        diff_content = response.text
+        diff_content = '\n'.join(diff_parts) + ('\n' if diff_parts else '')
         original_size = len(diff_content)
         
         # Truncate diff at 400KB (increased for Nova Pro's 300K context)
