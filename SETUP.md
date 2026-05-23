@@ -158,21 +158,3 @@ GitHub App settings → **Install App** → select your org or specific reposito
 
 Repos you install on must appear in `ALLOWED_REPOS`, or leave that variable empty to allow all. Open a pull request to verify — the agent should post a review comment within a few minutes.
 
----
-
-## Local development (no deploy needed)
-
-`scripts/run_local.py` skips the GitHub App and all AWS infrastructure except Bedrock. Use it to iterate on prompts or agent logic without redeploying.
-
-```bash
-# Run against any PR — posts a real comment
-GITHUB_TOKEN=ghp_... PR_URL=https://github.com/org/repo/pull/123 python scripts/run_local.py
-
-# Print the review instead of posting it
-DRY_RUN=true GITHUB_TOKEN=ghp_... PR_URL=... python scripts/run_local.py
-
-# Enable Terraform validation for this run
-TERRAFORM_VALIDATION_REPOS=org/repo GITHUB_TOKEN=ghp_... PR_URL=... python scripts/run_local.py
-```
-
-`GITHUB_TOKEN` needs **repo** scope. AWS credentials must be set (`AWS_PROFILE` or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`) for Bedrock access.
