@@ -17,7 +17,7 @@ app = BedrockAgentCoreApp()
 _graph = build_graph()
 
 logger.info('AgentCore PR Agent initialized', {
-    'model': os.getenv('BEDROCK_MODEL_ID', 'arn:aws:bedrock:us-west-2:322264632107:inference-profile/global.anthropic.claude-sonnet-4-6'),
+    'model_configured': bool(os.getenv('BEDROCK_MODEL_ID')),
 })
 
 

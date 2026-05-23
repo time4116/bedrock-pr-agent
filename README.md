@@ -54,7 +54,7 @@ All configuration is via environment variables. See `.env.example` for the full 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `GITHUB_SECRET_NAME` | `github-pr-agent/github` | Secrets Manager secret with `app_id`, `webhook_secret`, `private_key` |
-| `BEDROCK_MODEL_ID` | *(CDK-created)* | Bedrock inference profile ARN. CDK creates a cross-region Claude Sonnet inference profile automatically and wires it in — only set this manually to override or for local runs. |
+| `BEDROCK_MODEL_ID` | *(required)* | Bedrock model ID or inference profile ARN. For GitHub Actions deploys, store this as a repository secret. |
 | `ALLOWED_REPOS` | *(empty = all)* | Comma-separated `owner/repo` filter |
 | `TERRAFORM_VALIDATION_REPOS` | *(empty)* | Repos that get Terraform plan analysis |
 | `STAGE` | `dev` | Deployment stage; used to namespace all AWS resource names |

@@ -43,6 +43,7 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           STAGE: ${{ vars.STAGE || 'prod' }}
           GITHUB_SECRET_NAME: ${{ secrets.GH_SECRET_NAME || 'github-pr-agent/github' }}
+          BEDROCK_MODEL_ID: ${{ secrets.BEDROCK_MODEL_ID }}
           ALLOWED_REPOS: ${{ vars.ALLOWED_REPOS }}
           TERRAFORM_VALIDATION_REPOS: ${{ vars.TERRAFORM_VALIDATION_REPOS }}
           WEEKLY_REVIEW_LIMIT: ${{ vars.WEEKLY_REVIEW_LIMIT || '2' }}
