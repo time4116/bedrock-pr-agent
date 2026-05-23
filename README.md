@@ -143,3 +143,5 @@ Common issues:
 - **Repository profiles** — select different prompts, templates, validation tools, and severity thresholds per repository.
 - **Policy checks** — plug in workflow-specific checks for infrastructure, deployment safety, dependency changes, or security-sensitive paths.
 - **Cost controls** — add stronger token/diff budgeting and optional skip rules for low-risk changes.
+<!-- pr-agent-smoke-test: verifies deployed review workflow on a docs-only PR -->
+
