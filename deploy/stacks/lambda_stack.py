@@ -197,12 +197,22 @@ class LambdaStack(Stack):
             removal_policy=cdk.RemovalPolicy.RETAIN,
         )
 
+        _asset_exclude = [
+            ".git",
+            "deploy/cdk.out",
+            "**/__pycache__",
+            "**/*.pyc",
+            "**/*.egg-info",
+            ".venv",
+            "node_modules",
+        ]
+
         webhook_fn = lambda_.Function(
             self,
             "WebhookFunction",
             function_name=f"github-pr-agent-{stage}-webhook",
             runtime=lambda_.Runtime.PYTHON_3_11,
-            code=lambda_.Code.from_asset(repo_root),
+            code=lambda_.Code.from_asset(repo_root, exclude=_asset_exclude),
             handler="src/handlers/webhook.handler",
             timeout=Duration.seconds(10),
             memory_size=512,
@@ -216,7 +226,7 @@ class LambdaStack(Stack):
             "WorkerFunction",
             function_name=f"github-pr-agent-{stage}-worker",
             runtime=lambda_.Runtime.PYTHON_3_11,
-            code=lambda_.Code.from_asset(repo_root),
+            code=lambda_.Code.from_asset(repo_root, exclude=_asset_exclude),
             handler="src/handlers/worker_agentcore.handler",
             timeout=Duration.seconds(900),
             memory_size=512,

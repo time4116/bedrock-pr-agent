@@ -4,7 +4,6 @@ import aws_cdk as cdk
 from aws_cdk import (
     Stack,
     CfnOutput,
-    aws_bedrock as bedrock,
     aws_ecr_assets as ecr_assets,
     aws_iam as iam,
 )
@@ -26,14 +25,23 @@ class AgentCoreStack(Stack):
         region = self.region
         account = self.account
 
-        dockerfile_dir = os.path.join(
-            os.path.dirname(__file__), "..", "..", ".bedrock_agentcore", "pr_agent"
-        )
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
         image_asset = ecr_assets.DockerImageAsset(
             self,
             "AgentCoreImage",
-            directory=os.path.abspath(dockerfile_dir),
+            directory=repo_root,
+            file=os.path.join("docker", "Dockerfile"),
+            platform=ecr_assets.Platform.LINUX_ARM64,
+            exclude=[
+                "deploy/cdk.out",
+                ".git",
+                "**/__pycache__",
+                "**/*.pyc",
+                "**/*.egg-info",
+                ".venv",
+                "node_modules",
+            ],
         )
 
         execution_role = iam.Role(
@@ -309,46 +317,20 @@ class AgentCoreStack(Stack):
             )
         )
 
-        source_model_arn = config.get(
-            "bedrock_source_model_arn",
-            f"arn:aws:bedrock:{region}::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0",
-        )
+        self.inference_profile_arn = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 
-        inference_profile = bedrock.CfnInferenceProfile(
-            self,
-            "ClaudeInferenceProfile",
-            inference_profile_name=f"pr-agent-{stage}-claude",
-            model_source=bedrock.CfnInferenceProfile.InferenceProfileModelSourceProperty(
-                copy_from=source_model_arn,
-            ),
-        )
-
-        self.inference_profile_arn = inference_profile.attr_inference_profile_arn
-
-        CfnOutput(
-            self,
-            "InferenceProfileArn",
-            value=self.inference_profile_arn,
-            export_name=f"GitHubPrAgent-{stage}-InferenceProfileArn",
-        )
-
-        runtime = agentcore.CfnRuntime(
+        runtime = agentcore.Runtime(
             self,
             "AgentCoreRuntime",
-            runtime_name=f"pr-agent-{stage}",
+            agent_runtime_artifact=agentcore.AgentRuntimeArtifact.from_image_uri(
+                image_asset.image_uri
+            ),
+            runtime_name=f"pr_agent_{stage}",
             description=f"GitHub PR Agent AgentCore Runtime ({stage})",
-            runtime_artifact=agentcore.CfnRuntime.RuntimeArtifactProperty(
-                container_configuration=agentcore.CfnRuntime.ContainerConfigurationProperty(
-                    container_uri=image_asset.image_uri,
-                ),
-            ),
-            execution_role_arn=execution_role.role_arn,
-            network_configuration=agentcore.CfnRuntime.NetworkConfigurationProperty(
-                network_mode="PUBLIC",
-            ),
+            execution_role=execution_role,
         )
 
-        self.agent_runtime_arn = runtime.attr_runtime_arn
+        self.agent_runtime_arn = runtime.agent_runtime_arn
 
         CfnOutput(
             self,
