@@ -4,6 +4,7 @@ PR Diff Fetcher Tool for Agent.
 This tool fetches the actual code changes (diff) from a GitHub PR.
 """
 import os
+import tempfile
 from typing import Dict, Any
 
 from src.services.github_client import create_github_client
@@ -114,10 +115,17 @@ def fetch_pr_diff(
                 'files_changed': files_changed
             })
         
-        # Write diff to temp file to keep it out of conversation history
-        diff_file = f"/tmp/pr-{pr_number}-{owner}-{repo}-diff.txt"
-        with open(diff_file, 'w', encoding='utf-8') as f:
+        # Write diff to a securely-created temp file to keep large payloads out
+        # of process memory/logs while avoiding predictable /tmp file names.
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            encoding='utf-8',
+            prefix=f"pr-{pr_number}-{owner}-{repo}-",
+            suffix='-diff.txt',
+            delete=False,
+        ) as f:
             f.write(diff_content)
+            diff_file = f.name
         
         logger.info('Successfully fetched PR diff and wrote to file', {
             'pr_number': pr_number,

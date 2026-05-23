@@ -89,7 +89,7 @@ All configuration is via environment variables. See `.env.example` for the full 
 |----------|---------|-------------|
 | `GITHUB_SECRET_NAME` | `github-pr-agent/github` | Secrets Manager secret with `app_id`, `webhook_secret`, and `private_key` |
 | `BEDROCK_MODEL_ID` | _required_ | Bedrock model ID or inference profile ARN used by the review agent. The current runtime is configured for Anthropic Claude models through Bedrock. For GitHub Actions deploys, store this as a repository secret. |
-| `ALLOWED_REPOS` | _empty = all_ | Comma-separated `owner/repo` allowlist |
+| `ALLOWED_REPOS` | _required_ | Comma-separated `owner/repo` allowlist. Empty rejects all repositories; use `*` only when allowing every installed repository is intentional. |
 | `TERRAFORM_VALIDATION_REPOS` | _empty_ | Repositories that get Terraform plan analysis |
 | `WEEKLY_REVIEW_LIMIT` | `2` | Maximum accepted review events per repository per ISO week |
 | `STAGE` | `dev` | Deployment stage used to namespace AWS resource names |
@@ -121,7 +121,7 @@ Common issues:
 
 - **No comment posted**
   - Verify the GitHub App webhook is active and points to the deployed `WebhookUrl`.
-  - Verify the repository is included in `ALLOWED_REPOS`, or leave the allowlist empty to allow all installed repositories.
+  - Verify the repository is included in `ALLOWED_REPOS`. An empty allowlist rejects all repositories; set `*` only when reviewing every installed repository is intentional.
   - If logs show `Resource not accessible by integration`, confirm the GitHub App has **Issues: read & write** and that the installation owner approved the updated permissions. Top-level PR timeline comments use GitHub's issue comments API.
 
 - **Duplicate comments**

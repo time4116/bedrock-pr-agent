@@ -20,10 +20,14 @@ def is_repo_allowed(repo_full_name: str) -> bool:
     allowed_repos = os.environ.get('ALLOWED_REPOS', '')
 
     if not allowed_repos:
-        logger.warning('ALLOWED_REPOS not configured, allowing all repos')
+        logger.warning('ALLOWED_REPOS not configured, rejecting repo event')
+        return False
+
+    repo_list = [repo.strip().lower() for repo in allowed_repos.split(',') if repo.strip()]
+    if '*' in repo_list:
+        logger.warning('ALLOWED_REPOS wildcard configured, allowing all installed repos')
         return True
 
-    repo_list = [repo.strip().lower() for repo in allowed_repos.split(',')]
     is_allowed = repo_full_name.lower() in repo_list
 
     logger.debug('Checking repo allowlist', {
