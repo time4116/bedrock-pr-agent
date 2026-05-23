@@ -123,7 +123,7 @@ def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
     )
 
     model_id = os.getenv('BEDROCK_MODEL_ID', 'REDACTED_BEDROCK_INFERENCE_PROFILE')
-    llm = ChatBedrockConverse(model=model_id, temperature=0.3, max_tokens=4096)
+    llm = ChatBedrockConverse(model=model_id, model_provider="anthropic", temperature=0.3, max_tokens=4096)
 
     logger.info('Calling Bedrock for PR analysis', {
         'pr_number': pr_number,
