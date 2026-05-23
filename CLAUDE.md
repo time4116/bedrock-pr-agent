@@ -43,8 +43,8 @@ API Gateway → Webhook Lambda  (HMAC validation, repo filter, rate limit → SQ
 ```
 
 **Two-stack CDK deploy:**
-- `AgentCoreStack` (`deploy/stacks/agentcore_stack.py`) — builds the Docker image, pushes to ECR, creates the AgentCore Runtime and a cross-region Claude Sonnet Bedrock inference profile.
-- `LambdaStack` (`deploy/stacks/lambda_stack.py`) — API Gateway, Webhook Lambda, Worker Lambda, SQS queue, S3 rate-limit bucket. Receives the AgentCore ARN and inference profile ARN from `AgentCoreStack` as outputs.
+- `AgentCoreStack` (`deploy/stacks/agentcore_stack.py`) — builds the Docker image, pushes to ECR, and creates the AgentCore Runtime. `BEDROCK_MODEL_ID` is supplied from environment/GitHub Secrets.
+- `LambdaStack` (`deploy/stacks/lambda_stack.py`) — API Gateway, Webhook Lambda, Worker Lambda, SQS queue, S3 rate-limit bucket. Receives the AgentCore ARN and configured Bedrock model ID from `AgentCoreStack`/config.
 
 **AgentCore entrypoint:** `pr_agent.py` (root). The LangGraph business logic lives in `src/agent/graph.py`.
 

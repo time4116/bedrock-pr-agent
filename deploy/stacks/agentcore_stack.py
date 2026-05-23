@@ -317,7 +317,11 @@ class AgentCoreStack(Stack):
             )
         )
 
-        self.inference_profile_arn = "arn:aws:bedrock:us-west-2:322264632107:inference-profile/global.anthropic.claude-sonnet-4-6"
+        self.inference_profile_arn = config.get("bedrock_model_id", "")
+        if not self.inference_profile_arn:
+            raise ValueError(
+                "BEDROCK_MODEL_ID must be set to a Bedrock model ID or inference profile ARN"
+            )
 
         runtime = agentcore.Runtime(
             self,
