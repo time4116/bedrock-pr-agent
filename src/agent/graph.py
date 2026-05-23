@@ -122,7 +122,7 @@ def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
         .replace('{REVIEW_TEMPLATE}', template)
     )
 
-    model_id = os.getenv('BEDROCK_MODEL_ID', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
+    model_id = os.getenv('BEDROCK_MODEL_ID', 'REDACTED_BEDROCK_INFERENCE_PROFILE')
     llm = ChatBedrockConverse(model=model_id, temperature=0.3, max_tokens=4096)
 
     logger.info('Calling Bedrock for PR analysis', {

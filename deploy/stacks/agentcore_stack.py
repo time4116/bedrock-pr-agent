@@ -317,7 +317,7 @@ class AgentCoreStack(Stack):
             )
         )
 
-        self.inference_profile_arn = "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        self.inference_profile_arn = "REDACTED_BEDROCK_INFERENCE_PROFILE"
 
         runtime = agentcore.Runtime(
             self,
