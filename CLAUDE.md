@@ -81,3 +81,5 @@ Tracked in S3 (`RATE_LIMIT_BUCKET`, per-repo JSON files keyed by ISO week). The 
 ## Idempotent Comments
 
 `src/services/github_client.py:create_or_update_comment` finds an existing bot comment by an HTML marker embedded in the template. Subsequent runs on the same PR update rather than append. `github_commenter.py` also keeps an in-memory `_posted_comments` dict to block duplicate calls within a single execution.
+
+Top-level PR timeline comments are posted through GitHub's issue comments API (`repository.get_issue(pr_number).create_comment(...)`), so the GitHub App installation needs **Issues: read & write** in addition to Pull requests permissions. Permission changes require the installation owner to approve the updated app permissions before new installation tokens include them.

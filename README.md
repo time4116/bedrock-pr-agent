@@ -120,4 +120,5 @@ The agent currently fetches GitHub Actions logs to validate Terraform plans — 
 2. Verify repo is in `ALLOWED_REPOS`
 3. Check GitHub webhook delivery logs in App settings
 4. Verify `ALLOWED_REPOS` uses `owner/repo` format (e.g. `time4116/bedrock-pr-agent`)
+5. If the worker logs `Resource not accessible by integration` while creating an issue comment, verify the GitHub App has **Issues: read & write** and that the installation owner approved the updated permissions. Top-level PR timeline comments use GitHub's issue comments API.
 
