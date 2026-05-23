@@ -1,9 +1,7 @@
 """
 Amazon Bedrock AgentCore entrypoint for PR analysis.
 
-The LangGraph graph lives in src/agent/graph.py and is importable independently
-of AgentCore — use scripts/run_local.py to run against a PR without the GitHub
-App / webhook infrastructure (AWS Bedrock credentials still required).
+The LangGraph graph lives in src/agent/graph.py.
 """
 import os
 from typing import Dict, Any
