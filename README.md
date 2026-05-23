@@ -119,3 +119,4 @@ The agent currently fetches GitHub Actions logs to validate Terraform plans — 
 1. Check CloudWatch logs: webhook Lambda → worker Lambda → AgentCore runtime
 2. Verify repo is in `ALLOWED_REPOS`
 3. Check GitHub webhook delivery logs in App settings
+4. Verify `ALLOWED_REPOS` uses `owner/repo` format (e.g. `time4116/bedrock-pr-agent`)
