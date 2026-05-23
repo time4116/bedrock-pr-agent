@@ -317,7 +317,11 @@ class AgentCoreStack(Stack):
             )
         )
 
-        self.inference_profile_arn = "REDACTED_BEDROCK_INFERENCE_PROFILE"
+        self.inference_profile_arn = config.get("bedrock_model_id", "")
+        if not self.inference_profile_arn:
+            raise ValueError(
+                "BEDROCK_MODEL_ID must be set to a Bedrock model ID or inference profile ARN"
+            )
 
         runtime = agentcore.Runtime(
             self,

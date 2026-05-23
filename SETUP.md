@@ -36,9 +36,10 @@ The script opens your browser to a pre-filled GitHub App creation page. Click **
 
 ## 2. Enable Bedrock model access
 
-In the AWS Console: **Amazon Bedrock → Model access** → enable **Claude Sonnet 4**.
+In the AWS Console: **Amazon Bedrock → Model access** → enable the Claude model you plan to use.
 
-CDK creates a cross-region inference profile for it automatically — you don't need to copy any ARN.
+Copy the Bedrock model ID or inference profile ARN and provide it as `BEDROCK_MODEL_ID`.
+For GitHub Actions deploys, store that value in the repository secret named `BEDROCK_MODEL_ID`.
 
 ---
 
@@ -54,9 +55,11 @@ Edit `.env` and set at minimum:
 |----------|-------------|
 | `AWS_ACCOUNT` | Your 12-digit AWS account ID |
 | `AWS_REGION` | e.g. `us-east-1` |
+| `BEDROCK_MODEL_ID` | Bedrock model ID or inference profile ARN |
 | `ALLOWED_REPOS` | Comma-separated `owner/repo` list, or leave empty to allow all |
 
-Leave `BEDROCK_MODEL_ID` blank — CDK sets it automatically.
+For GitHub Actions deploys, store `BEDROCK_MODEL_ID` as a repository secret. For
+local deploys/runs, export it in your shell or set it in `.env`.
 
 ---
 
@@ -93,6 +96,7 @@ The script prints the role ARN. Add the following to **GitHub → Settings → S
 | Secret | `AWS_DEPLOY_ROLE_ARN` | ARN printed above |
 | Secret | `AWS_ACCOUNT` | Your 12-digit account ID |
 | Secret | `GH_SECRET_NAME` | Secrets Manager secret name (default: `github-pr-agent/github`) |
+| Secret | `BEDROCK_MODEL_ID` | Bedrock model ID or inference profile ARN |
 | Variable | `AWS_REGION` | e.g. `us-east-1` |
 | Variable | `STAGE` | `prod` |
 | Variable | `ALLOWED_REPOS` | Comma-separated `owner/repo` (e.g. `time4116/bedrock-pr-agent`), or leave empty to allow all |
