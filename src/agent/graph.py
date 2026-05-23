@@ -126,7 +126,7 @@ def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
     if not model_id:
         raise ValueError('BEDROCK_MODEL_ID must be set to a Bedrock model ID or inference profile ARN')
 
-    llm = ChatBedrockConverse(model=model_id, provider="anthropic", temperature=0.3, max_tokens=4096)
+    llm = ChatBedrockConverse(model=model_id, provider="anthropic", temperature=0.2, max_tokens=2000)
 
     logger.info('Calling Bedrock for PR analysis', {
         'pr_number': pr_number,
