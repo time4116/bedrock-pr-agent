@@ -135,6 +135,17 @@ def _retry_on_rate_limit(func, max_retries=3):
     return wrapper
 
 
+BOT_COMMENT_MARKER = '<!-- GITHUB-PR-AGENT-COMMENT -->'
+
+
+def _find_bot_comment(issue) -> Optional[Any]:
+    """Return the existing bot comment on an issue/PR if one exists."""
+    for comment in issue.get_comments():
+        if comment.body and BOT_COMMENT_MARKER in comment.body:
+            return comment
+    return None
+
+
 def get_pr_comment(
     octokit: Github,
     owner: str,
@@ -145,9 +156,9 @@ def get_pr_comment(
     try:
         repository = octokit.get_repo(f'{owner}/{repo}')
         issue = repository.get_issue(pr_number)
-        for comment in issue.get_comments():
-            if comment.body and '<!-- GITHUB-PR-AGENT-COMMENT -->' in comment.body:
-                return {'id': comment.id, 'body': comment.body}
+        comment = _find_bot_comment(issue)
+        if comment:
+            return {'id': comment.id, 'body': comment.body}
         return None
     except Exception as error:
         logger.error('Error getting PR comments', {'error': str(error)})
@@ -165,24 +176,27 @@ def create_or_update_comment(
     """Create or update a comment on a PR (idempotent)."""
     @_retry_on_rate_limit
     def _post_comment():
-        comment_body = f'<!-- GITHUB-PR-AGENT-COMMENT -->\n{body}'
+        comment_body = f'{BOT_COMMENT_MARKER}\n{body}'
         repository = octokit.get_repo(f'{owner}/{repo}')
         issue = repository.get_issue(pr_number)
 
+        comment = None
         if existing_comment_id:
             comment = issue.get_comment(existing_comment_id)
-            if '<!-- GITHUB-PR-AGENT-COMMENT -->' not in comment.body:
+            if BOT_COMMENT_MARKER not in comment.body:
                 logger.warning('Attempted to edit non-app comment', {'comment_id': existing_comment_id})
-                new_comment = issue.create_comment(comment_body)
-                logger.info('Created new PR comment (existing was not ours)')
-                return new_comment
-            comment.edit(comment_body)
-            logger.info('Updated existing PR comment', {'comment_id': existing_comment_id})
-            return comment
+                comment = None
         else:
-            new_comment = issue.create_comment(comment_body)
-            logger.info('Created new PR comment', {'pr_number': pr_number})
-            return new_comment
+            comment = _find_bot_comment(issue)
+
+        if comment:
+            comment.edit(comment_body)
+            logger.info('Updated existing PR comment', {'comment_id': comment.id})
+            return comment
+
+        new_comment = issue.create_comment(comment_body)
+        logger.info('Created new PR comment', {'pr_number': pr_number})
+        return new_comment
 
     try:
         comment = _post_comment()
