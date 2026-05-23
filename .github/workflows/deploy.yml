@@ -36,13 +36,16 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
+      - name: Mask sensitive values
+        run: echo "::add-mask::${{ vars.AWS_ACCOUNT }}"
+
       - name: CDK deploy
         working-directory: deploy
         env:
           AWS_ACCOUNT: ${{ vars.AWS_ACCOUNT }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           STAGE: ${{ vars.STAGE || 'prod' }}
-          GITHUB_SECRET_NAME: ${{ vars.GH_SECRET_NAME || 'github-pr-agent/github' }}
+          GITHUB_SECRET_NAME: ${{ secrets.GH_SECRET_NAME || 'github-pr-agent/github' }}
           ALLOWED_REPOS: ${{ vars.ALLOWED_REPOS }}
           TERRAFORM_VALIDATION_REPOS: ${{ vars.TERRAFORM_VALIDATION_REPOS }}
           WEEKLY_REVIEW_LIMIT: ${{ vars.WEEKLY_REVIEW_LIMIT || '2' }}
