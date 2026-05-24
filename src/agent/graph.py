@@ -13,6 +13,7 @@ from langgraph.graph import END, StateGraph
 from src.agent.state import PRReviewState
 from src.agent.tools.github_commenter import post_github_comment
 from src.agent.tools.pr_diff_fetcher import fetch_pr_diff
+from src.agent.tools.security_scanner import format_security_context, scan_diff_for_security_findings
 from src.agent.tools.terraform_validator import validate_terraform_plan
 from src.utils.config import is_repo_terraform_enabled
 from src.utils.logger import logger
@@ -73,6 +74,23 @@ def node_fetch_diff(state: PRReviewState) -> Dict[str, Any]:
     }
 
 
+def node_scan_security(state: PRReviewState) -> Dict[str, Any]:
+    """Run zero-cost deterministic security checks over the PR diff."""
+    diff = state.get('pr_diff') or ''
+    try:
+        return {'security_results': scan_diff_for_security_findings(diff)}
+    except Exception as e:
+        logger.error('Security scan failed', {'error': str(e), 'pr_number': state['pr_number']})
+        return {
+            'security_results': {
+                'success': False,
+                'error': str(e),
+                'total_findings': 0,
+                'findings': [],
+            }
+        }
+
+
 def node_validate_terraform(state: PRReviewState) -> Dict[str, Any]:
     result = validate_terraform_plan(
         owner=state['owner'],
@@ -83,13 +101,17 @@ def node_validate_terraform(state: PRReviewState) -> Dict[str, Any]:
     return {'terraform_results': result}
 
 
-def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
-    repo_full = f"{state['owner']}/{state['repo']}"
-    pr_number = state['pr_number']
-    diff = state.get('pr_diff') or ''
-    diff_stats = state.get('diff_stats') or {}
-    terraform_results = state.get('terraform_results')
-
+def _build_review_prompt(
+    *,
+    repo_full: str,
+    pr_number: int,
+    pr_title: str,
+    pr_body: str,
+    diff: str,
+    diff_stats: dict[str, Any],
+    terraform_results: dict[str, Any] | None,
+    security_results: dict[str, Any] | None,
+) -> str:
     enable_terraform = terraform_results is not None
     template = _TEMPLATE_WITH_TERRAFORM if enable_terraform else _TEMPLATE_WITHOUT_TERRAFORM
 
@@ -115,16 +137,41 @@ def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
         else:
             terraform_context = f'\n\n**Terraform Validation**: {terraform_results.get("message", "No plans found.")}'
 
-    prompt = (
+    security_context = format_security_context(security_results)
+
+    return (
         _PROMPT_PR_REVIEW
         .replace('{REPO}', repo_full)
         .replace('{PR_NUMBER}', str(pr_number))
-        .replace('{PR_TITLE}', state['pr_title'])
-        .replace('{PR_BODY}', state['pr_body'])
+        .replace('{PR_TITLE}', pr_title)
+        .replace('{PR_BODY}', pr_body)
         .replace('{DIFF}', diff)
         .replace('{TERRAFORM_CONTEXT}', terraform_context)
+        .replace('{SECURITY_CONTEXT}', security_context)
         .replace('{REVIEW_TEMPLATE}', template)
     )
+
+
+def node_analyze_and_comment(state: PRReviewState) -> Dict[str, Any]:
+    repo_full = f"{state['owner']}/{state['repo']}"
+    pr_number = state['pr_number']
+    diff = state.get('pr_diff') or ''
+    diff_stats = state.get('diff_stats') or {}
+    terraform_results = state.get('terraform_results')
+    security_results = state.get('security_results')
+
+    prompt = _build_review_prompt(
+        repo_full=repo_full,
+        pr_number=pr_number,
+        pr_title=state['pr_title'],
+        pr_body=state['pr_body'],
+        diff=diff,
+        diff_stats=diff_stats,
+        terraform_results=terraform_results,
+        security_results=security_results,
+    )
+
+    enable_terraform = terraform_results is not None
 
     model_id = os.getenv('BEDROCK_MODEL_ID')
     if not model_id:
@@ -194,6 +241,14 @@ def node_handle_error(state: PRReviewState) -> Dict[str, Any]:
 
 def _route_after_fetch_diff(
     state: PRReviewState,
+) -> Literal['scan_security', 'handle_error']:
+    if state.get('error'):
+        return 'handle_error'
+    return 'scan_security'
+
+
+def _route_after_scan_security(
+    state: PRReviewState,
 ) -> Literal['validate_terraform', 'analyze_and_comment', 'handle_error']:
     if state.get('error'):
         return 'handle_error'
@@ -224,6 +279,7 @@ def build_graph() -> Any:
     builder = StateGraph(PRReviewState)
 
     builder.add_node('fetch_diff', node_fetch_diff)
+    builder.add_node('scan_security', node_scan_security)
     builder.add_node('validate_terraform', node_validate_terraform)
     builder.add_node('analyze_and_comment', node_analyze_and_comment)
     builder.add_node('handle_error', node_handle_error)
@@ -231,6 +287,10 @@ def build_graph() -> Any:
     builder.set_entry_point('fetch_diff')
 
     builder.add_conditional_edges('fetch_diff', _route_after_fetch_diff, {
+        'scan_security': 'scan_security',
+        'handle_error': 'handle_error',
+    })
+    builder.add_conditional_edges('scan_security', _route_after_scan_security, {
         'validate_terraform': 'validate_terraform',
         'analyze_and_comment': 'analyze_and_comment',
         'handle_error': 'handle_error',
