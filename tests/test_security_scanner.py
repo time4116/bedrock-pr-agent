@@ -41,6 +41,46 @@ def test_scan_diff_finds_language_agnostic_high_confidence_risks():
     assert not any("oldtoken" in finding["line"] for finding in result["findings"])
 
 
+def test_scan_diff_advances_line_numbers_after_matched_added_lines():
+    diff = """diff --git a/app/routes.py b/app/routes.py
+--- a/app/routes.py
++++ b/app/routes.py
+@@ -8,2 +10,3 @@
++eval(request.args["expr"])
++api_key = "1234567890abcdef1234567890abcdef"
++safe_value = "not a finding"
+"""
+
+    result = scan_diff_for_security_findings(diff)
+
+    locations = {
+        finding["rule_id"]: finding["line_number"] for finding in result["findings"]
+    }
+    assert locations == {
+        "dynamic-code-execution": 10,
+        "hardcoded-secret": 11,
+    }
+
+
+def test_sql_interpolation_requires_sql_and_interpolation_in_same_statement():
+    diff = """diff --git a/app/reports.py b/app/reports.py
+--- a/app/reports.py
++++ b/app/reports.py
+@@ -1,2 +1,3 @@
++logger.info("SELECT examples should use parameters", f"user={user_id}")
++query = f"SELECT * FROM users WHERE id = {user_id}"
++db.execute("DELETE FROM users WHERE id = %s", [user_id])
+"""
+
+    result = scan_diff_for_security_findings(diff)
+
+    sql_findings = [
+        finding for finding in result["findings"] if finding["rule_id"] == "sql-string-interpolation"
+    ]
+    assert [finding["line_number"] for finding in sql_findings] == [2]
+    assert "logger.info" not in sql_findings[0]["line"]
+
+
 def test_security_context_is_compact_and_actionable():
     findings = {
         "success": True,

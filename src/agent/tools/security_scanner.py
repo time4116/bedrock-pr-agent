@@ -70,7 +70,11 @@ RULES: tuple[SecurityRule, ...] = (
         title="SQL built with string interpolation",
         severity="high",
         pattern=re.compile(
-            r"(?is)(SELECT|INSERT|UPDATE|DELETE)\s+.+(\$\{|%\s|\.format\s*\(|\+\s*\w|f['\"]|`[^`]*\$\{)"
+            r"(?ix)("
+            r"f['\"][^'\"\n]*(SELECT|INSERT|UPDATE|DELETE)\b[^'\"\n]*\{[^'\"\n]*['\"]|"
+            r"`[^`\n]*(SELECT|INSERT|UPDATE|DELETE)\b[^`\n]*\$\{[^`\n]*`|"
+            r"(SELECT|INSERT|UPDATE|DELETE)\b[^;\n]*(\.format\s*\(|\+\s*\w)"
+            r")"
         ),
         recommendation="Use parameterized queries or a safe query builder instead of string interpolation.",
     ),
@@ -131,22 +135,24 @@ def scan_diff_for_security_findings(diff: str) -> dict[str, Any]:
 
         if raw_line.startswith("+") and not raw_line.startswith(_IGNORE_ADDED_PREFIXES):
             line_number = new_line_number
-            for rule in RULES:
-                if rule.pattern.search(raw_line):
-                    findings.append(
-                        {
-                            "severity": rule.severity,
-                            "rule_id": rule.rule_id,
-                            "title": rule.title,
-                            "file": current_file,
-                            "line_number": line_number,
-                            "line": _redact(raw_line),
-                            "recommendation": rule.recommendation,
-                        }
-                    )
-                    break
-            if new_line_number is not None:
-                new_line_number += 1
+            try:
+                for rule in RULES:
+                    if rule.pattern.search(raw_line):
+                        findings.append(
+                            {
+                                "severity": rule.severity,
+                                "rule_id": rule.rule_id,
+                                "title": rule.title,
+                                "file": current_file,
+                                "line_number": line_number,
+                                "line": _redact(raw_line),
+                                "recommendation": rule.recommendation,
+                            }
+                        )
+                        break
+            finally:
+                if new_line_number is not None:
+                    new_line_number += 1
         elif raw_line.startswith("-"):
             continue
         elif new_line_number is not None:
