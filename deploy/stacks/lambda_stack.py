@@ -67,6 +67,7 @@ class LambdaStack(Stack):
             "BEDROCK_MODEL_ID": config["bedrock_model_id"],
             "ALLOWED_REPOS": config["allowed_repos"],
             "TERRAFORM_VALIDATION_REPOS": config["terraform_validation_repos"],
+            "SECURITY_SCAN_ENABLED": config.get("security_scan_enabled", "true"),
             "AGENT_ARN": agent_runtime_arn,
             "STAGE": stage,
             "LOG_LEVEL": config["log_level"],

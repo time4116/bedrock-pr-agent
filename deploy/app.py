@@ -18,6 +18,7 @@ config = {
     "bedrock_model_id": os.environ.get("BEDROCK_MODEL_ID", ""),
     "allowed_repos": os.environ.get("ALLOWED_REPOS", ""),
     "terraform_validation_repos": os.environ.get("TERRAFORM_VALIDATION_REPOS", ""),
+    "security_scan_enabled": os.environ.get("SECURITY_SCAN_ENABLED", "true"),
     "log_level": os.environ.get("LOG_LEVEL", "info"),
     "weekly_review_limit": os.environ.get("WEEKLY_REVIEW_LIMIT", "2"),
 }

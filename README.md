@@ -91,6 +91,7 @@ All configuration is via environment variables. See `.env.example` for the full 
 | `BEDROCK_MODEL_ID` | _required_ | Bedrock model ID or inference profile ARN used by the review agent. The current runtime is configured for Anthropic Claude models through Bedrock. For GitHub Actions deploys, store this as a repository secret. |
 | `ALLOWED_REPOS` | _required_ | Comma-separated `owner/repo` allowlist. Empty rejects all repositories; use `*` only when allowing every installed repository is intentional. |
 | `TERRAFORM_VALIDATION_REPOS` | _empty_ | Repositories that get Terraform plan analysis |
+| `SECURITY_SCAN_ENABLED` | `true` | Enables the zero-cost deterministic changed-line security scan; set to `false`, `0`, `no`, or `off` to skip it |
 | `WEEKLY_REVIEW_LIMIT` | `2` | Maximum accepted review events per repository per ISO week |
 | `STAGE` | `dev` | Deployment stage used to namespace AWS resource names |
 
