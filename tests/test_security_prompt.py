@@ -84,6 +84,38 @@ def test_review_prompt_includes_security_context():
     assert "Do not invent security findings" in prompt
 
 
+def test_review_template_includes_dedicated_security_section():
+    prompt = _build_review_prompt(
+        repo_full="time4116/example",
+        pr_number=42,
+        pr_title="Add debug endpoint",
+        pr_body="Adds a temporary endpoint.",
+        diff="+eval(req.query.expr)",
+        diff_stats={"files_changed": 1, "additions": 1, "deletions": 0, "truncated": False},
+        terraform_results=None,
+        security_results={"success": True, "total_findings": 0, "findings": []},
+    )
+
+    assert "### Security scan" in prompt
+    assert "{SECURITY_FINDINGS}" in prompt
+    assert "{SECURITY_FINDINGS}: Summarize deterministic scanner results" in prompt
+
+
+def test_terraform_review_template_includes_security_section_before_infrastructure():
+    prompt = _build_review_prompt(
+        repo_full="time4116/example",
+        pr_number=42,
+        pr_title="Update infra",
+        pr_body="Changes Terraform.",
+        diff="+resource \"aws_s3_bucket\" \"example\" {}",
+        diff_stats={"files_changed": 1, "additions": 1, "deletions": 0, "truncated": False},
+        terraform_results={"success": True, "terraform_plans": []},
+        security_results={"success": True, "total_findings": 0, "findings": []},
+    )
+
+    assert prompt.index("### Security scan") < prompt.index("### Infrastructure changes")
+
+
 def test_review_prompt_omits_security_context_when_scan_did_not_run():
     prompt = _build_review_prompt(
         repo_full="time4116/example",

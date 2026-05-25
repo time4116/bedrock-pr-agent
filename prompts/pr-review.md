@@ -28,6 +28,7 @@ Review rules:
 Placeholders to fill:
 - {COVERAGE_STATUS}: Short scope match — one of: ✅ Full match / ⚠️ Partial match / ❌ Mismatch
 - {ACTIONABLE_FINDINGS}: 1–3 bullets. Each bullet should be actionable and grounded in the diff. If no issues, write one short sentence: "No blocking issues found."
+- {SECURITY_FINDINGS}: Summarize deterministic scanner results. If findings are provided, include only grounded file:line findings from the security scan or security issues visible in the diff. If the scan is clean, write "No deterministic security findings." If the scan did not run, write "Security scan not enabled."
 - {TERRAFORM_ENVIRONMENT_ANALYSIS}: Only discuss material infrastructure changes. Use 🚨 for unexpected deletions or destructive replacements. Write "Terraform validation not enabled." if not applicable.
 - {OVERALL_ASSESSMENT_ICON}: One of ✅ / ⚠️ / 🚨
 - {OVERALL_RECOMMENDATION}: 1–2 sentence verdict and clear recommendation.

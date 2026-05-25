@@ -16,6 +16,12 @@
 
 ---
 
+### Security scan
+
+{SECURITY_FINDINGS}
+
+---
+
 ### Infrastructure changes
 
 {TERRAFORM_ENVIRONMENT_ANALYSIS}

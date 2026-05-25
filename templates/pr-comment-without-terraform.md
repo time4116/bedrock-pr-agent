@@ -16,6 +16,12 @@
 
 ---
 
+### Security scan
+
+{SECURITY_FINDINGS}
+
+---
+
 ### {OVERALL_ASSESSMENT_ICON} Verdict
 
 {OVERALL_RECOMMENDATION}
