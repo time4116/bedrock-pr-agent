@@ -2,7 +2,7 @@
 Configuration utilities for filtering repos.
 """
 import os
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 from src.utils.logger import logger
 
@@ -67,6 +67,17 @@ def is_repo_terraform_enabled(repo_full_name: str) -> bool:
     return is_enabled
 
 
+def is_security_scan_enabled() -> bool:
+    """
+    Check if zero-cost deterministic security scanning is enabled.
+
+    The scan is enabled by default. Set SECURITY_SCAN_ENABLED=false, 0, no, or
+    off to skip the scan node and omit scanner context from the PR review prompt.
+    """
+    value = os.environ.get('SECURITY_SCAN_ENABLED', 'true').strip().lower()
+    return value not in {'false', '0', 'no', 'off'}
+
+
 def get_config() -> Dict[str, Any]:
     """
     Get configuration values with defaults.
@@ -80,6 +91,7 @@ def get_config() -> Dict[str, Any]:
     return {
         'allowed_repos': [r.strip() for r in allowed_repos_str.split(',') if r.strip()],
         'terraform_validation_repos': [r.strip() for r in terraform_repos_str.split(',') if r.strip()],
+        'security_scan_enabled': is_security_scan_enabled(),
         'aws_region': os.environ.get('AWS_REGION', 'us-east-1'),
         'stage': os.environ.get('STAGE', 'dev')
     }

@@ -4,7 +4,7 @@ LangGraph PR review agent — business logic, independent of the AgentCore runti
 import os
 import contextlib
 from pathlib import Path
-from typing import Any, Dict, Literal
+from typing import Any, Dict, Literal, cast
 
 from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import HumanMessage
@@ -15,7 +15,7 @@ from src.agent.tools.github_commenter import post_github_comment
 from src.agent.tools.pr_diff_fetcher import fetch_pr_diff
 from src.agent.tools.security_scanner import format_security_context, scan_diff_for_security_findings
 from src.agent.tools.terraform_validator import validate_terraform_plan
-from src.utils.config import is_repo_terraform_enabled
+from src.utils.config import is_repo_terraform_enabled, is_security_scan_enabled
 from src.utils.logger import logger
 
 _REPO_ROOT = Path(__file__).parent.parent.parent
@@ -137,7 +137,7 @@ def _build_review_prompt(
         else:
             terraform_context = f'\n\n**Terraform Validation**: {terraform_results.get("message", "No plans found.")}'
 
-    security_context = format_security_context(security_results)
+    security_context = format_security_context(security_results) if security_results is not None else ''
 
     return (
         _PROMPT_PR_REVIEW
@@ -241,10 +241,14 @@ def node_handle_error(state: PRReviewState) -> Dict[str, Any]:
 
 def _route_after_fetch_diff(
     state: PRReviewState,
-) -> Literal['scan_security', 'handle_error']:
+) -> Literal['scan_security', 'validate_terraform', 'analyze_and_comment', 'handle_error']:
     if state.get('error'):
         return 'handle_error'
-    return 'scan_security'
+    if is_security_scan_enabled():
+        return 'scan_security'
+    if is_repo_terraform_enabled(f"{state['owner']}/{state['repo']}"):
+        return 'validate_terraform'
+    return 'analyze_and_comment'
 
 
 def _route_after_scan_security(
@@ -265,10 +269,10 @@ def _route_after_validate_terraform(
     return 'analyze_and_comment'
 
 
-def _route_after_analyze(state: PRReviewState) -> Literal[str]:
+def _route_after_analyze(state: PRReviewState) -> str:
     if state.get('error'):
         return 'handle_error'
-    return END
+    return cast(str, END)
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +292,8 @@ def build_graph() -> Any:
 
     builder.add_conditional_edges('fetch_diff', _route_after_fetch_diff, {
         'scan_security': 'scan_security',
+        'validate_terraform': 'validate_terraform',
+        'analyze_and_comment': 'analyze_and_comment',
         'handle_error': 'handle_error',
     })
     builder.add_conditional_edges('scan_security', _route_after_scan_security, {

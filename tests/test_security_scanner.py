@@ -20,7 +20,7 @@ def test_scan_diff_finds_language_agnostic_high_confidence_risks():
 +fetch(url, { rejectUnauthorized: false });
 +db.query(`SELECT * FROM users WHERE id = ${req.query.id}`);
  context line should not be scanned: eval(req.body.x)
--const old = "ghp_old_fake_removed_token";
+-const old = "removed_fake_token_value";
 """
 
     result = scan_diff_for_security_findings(diff)

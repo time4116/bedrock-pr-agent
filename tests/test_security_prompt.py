@@ -1,6 +1,7 @@
 import sys
 import types
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -47,7 +48,8 @@ setattr(fake_graph, "StateGraph", object)
 sys.modules.setdefault("langgraph", fake_langgraph)
 sys.modules.setdefault("langgraph.graph", fake_graph)
 
-from src.agent.graph import _build_review_prompt  # noqa: E402
+from src.agent.graph import _build_review_prompt, _route_after_fetch_diff  # noqa: E402
+from src.agent.state import PRReviewState  # noqa: E402
 
 
 def test_review_prompt_includes_security_context():
@@ -80,3 +82,60 @@ def test_review_prompt_includes_security_context():
     assert "Dynamic code execution" in prompt
     assert "app/server.js:12" in prompt
     assert "Do not invent security findings" in prompt
+
+
+def test_review_prompt_omits_security_context_when_scan_did_not_run():
+    prompt = _build_review_prompt(
+        repo_full="time4116/example",
+        pr_number=42,
+        pr_title="Docs only",
+        pr_body="Updates docs.",
+        diff="+README update",
+        diff_stats={"files_changed": 1, "additions": 1, "deletions": 0, "truncated": False},
+        terraform_results=None,
+        security_results=None,
+    )
+
+    assert "**Security scan findings**" not in prompt
+    assert "Security scan unavailable" not in prompt
+
+
+def _minimal_state() -> PRReviewState:
+    return {
+        "installation_id": 1,
+        "owner": "time4116",
+        "repo": "example",
+        "pr_number": 42,
+        "pr_title": "Title",
+        "pr_body": "Body",
+        "head_sha": "abc123",
+        "pr_diff": None,
+        "diff_stats": None,
+        "terraform_results": None,
+        "security_results": None,
+        "analysis": None,
+        "comment_posted": False,
+        "error": None,
+    }
+
+
+def test_fetch_route_runs_security_scan_by_default():
+    with patch.dict("os.environ", {}, clear=True):
+        assert _route_after_fetch_diff(_minimal_state()) == "scan_security"
+
+
+def test_fetch_route_skips_security_scan_when_disabled():
+    with patch.dict("os.environ", {"SECURITY_SCAN_ENABLED": "false"}, clear=True):
+        assert _route_after_fetch_diff(_minimal_state()) == "analyze_and_comment"
+
+
+def test_fetch_route_preserves_terraform_validation_when_security_scan_disabled():
+    with patch.dict(
+        "os.environ",
+        {
+            "SECURITY_SCAN_ENABLED": "false",
+            "TERRAFORM_VALIDATION_REPOS": "time4116/example",
+        },
+        clear=True,
+    ):
+        assert _route_after_fetch_diff(_minimal_state()) == "validate_terraform"

@@ -96,6 +96,7 @@ def _invoke_agent_for_pr(
             'allowed_repos': os.environ.get('ALLOWED_REPOS', ''),
             'terraform_validation_repos': os.environ.get('TERRAFORM_VALIDATION_REPOS', ''),
             'bedrock_model_id': os.environ.get('BEDROCK_MODEL_ID', ''),
+            'security_scan_enabled': os.environ.get('SECURITY_SCAN_ENABLED', 'true'),
             'github_secret_name': os.environ.get('GITHUB_SECRET_NAME', 'github-pr-agent/github'),
         }
     }
@@ -144,7 +145,9 @@ def _invoke_agent_for_pr(
                 'error_type': error_type,
                 'pr_number': pr_number,
                 'repo': repo_full_name,
-                'recommendation': 'Consider switching to Nova Pro (300K context) or disabling policy checks for large PRs'
+                'recommendation': (
+                    'Consider switching to Nova Pro (300K context) or disabling policy checks for large PRs'
+                )
             })
         else:
             logger.error('AgentCore invocation failed', {

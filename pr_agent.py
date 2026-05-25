@@ -78,6 +78,7 @@ def invoke(payload: Dict[str, Any]) -> Dict[str, Any]:
             'diff_stats': None,
             'policy_results': None,
             'terraform_results': None,
+            'security_results': None,
             'analysis': None,
             'comment_posted': False,
             'error': None,

@@ -15,7 +15,7 @@ setattr(fake_botocore_exceptions, "ClientError", type("ClientError", (Exception,
 sys.modules.setdefault("botocore", fake_botocore)
 sys.modules.setdefault("botocore.exceptions", fake_botocore_exceptions)
 
-from src.utils.config import is_repo_allowed  # noqa: E402
+from src.utils.config import is_repo_allowed, is_security_scan_enabled  # noqa: E402
 
 
 class RepoAllowlistSecurityTests(unittest.TestCase):
@@ -31,6 +31,24 @@ class RepoAllowlistSecurityTests(unittest.TestCase):
         with patch.dict(os.environ, {"ALLOWED_REPOS": "time4116/bedrock-pr-agent"}, clear=False):
             self.assertTrue(is_repo_allowed("Time4116/Bedrock-PR-Agent"))
             self.assertFalse(is_repo_allowed("other/repo"))
+
+
+class SecurityScanFeatureFlagTests(unittest.TestCase):
+    def test_security_scan_enabled_by_default(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertTrue(is_security_scan_enabled())
+
+    def test_security_scan_can_be_disabled(self):
+        for value in ("false", "0", "no", "off", "FALSE"):
+            with self.subTest(value=value):
+                with patch.dict(os.environ, {"SECURITY_SCAN_ENABLED": value}, clear=False):
+                    self.assertFalse(is_security_scan_enabled())
+
+    def test_security_scan_allows_truthy_values(self):
+        for value in ("true", "1", "yes", "on", "anything-else"):
+            with self.subTest(value=value):
+                with patch.dict(os.environ, {"SECURITY_SCAN_ENABLED": value}, clear=False):
+                    self.assertTrue(is_security_scan_enabled())
 
 
 if __name__ == "__main__":
