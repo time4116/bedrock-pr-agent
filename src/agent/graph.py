@@ -138,9 +138,15 @@ def _build_review_prompt(
             terraform_context = f'\n\n**Terraform Validation**: {terraform_results.get("message", "No plans found.")}'
 
     security_context = format_security_context(security_results) if security_results is not None else ''
+    prompt_template = _PROMPT_PR_REVIEW
+    if not enable_terraform:
+        prompt_template = prompt_template.replace(
+            '- {TERRAFORM_ENVIRONMENT_ANALYSIS}: Only discuss material infrastructure changes. Use 🚨 for unexpected deletions or destructive replacements. Write "Terraform validation not enabled." if not applicable.\n',
+            '',
+        )
 
     return (
-        _PROMPT_PR_REVIEW
+        prompt_template
         .replace('{REPO}', repo_full)
         .replace('{PR_NUMBER}', str(pr_number))
         .replace('{PR_TITLE}', pr_title)

@@ -116,6 +116,23 @@ def test_terraform_review_template_includes_security_section_before_infrastructu
     assert prompt.index("### Security scan") < prompt.index("### Infrastructure changes")
 
 
+def test_standard_review_template_omits_terraform_section_and_instruction():
+    prompt = _build_review_prompt(
+        repo_full="time4116/example",
+        pr_number=42,
+        pr_title="Docs only",
+        pr_body="Updates docs.",
+        diff="+README update",
+        diff_stats={"files_changed": 1, "additions": 1, "deletions": 0, "truncated": False},
+        terraform_results=None,
+        security_results={"success": True, "total_findings": 0, "findings": []},
+    )
+
+    assert "### Infrastructure changes" not in prompt
+    assert "{TERRAFORM_ENVIRONMENT_ANALYSIS}" not in prompt
+    assert "Terraform validation not enabled" not in prompt
+
+
 def test_review_prompt_omits_security_context_when_scan_did_not_run():
     prompt = _build_review_prompt(
         repo_full="time4116/example",
