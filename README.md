@@ -35,6 +35,10 @@ At runtime:
 
 The analysis question is intentionally narrow: **does the code diff match what the PR description says it does?** External ticket systems are not required.
 
+## Example review
+
+See [PR #15](https://github.com/time4116/bedrock-pr-agent/pull/15) for a deliberately unmerged demo pull request that exercises the review workflow against a small insecure SQL example. The PR is kept open as a stable public example rather than landing the fixture in `main`.
+
 Terraform validation is one example of workflow-specific logic plugged into the harness. For repositories listed in `TERRAFORM_VALIDATION_REPOS`, the agent downloads GitHub Actions logs for the PR head SHA, parses Terraform plan output, and flags material infrastructure risk such as deletes or forced replacements.
 
 ## Architecture
