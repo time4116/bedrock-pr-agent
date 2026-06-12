@@ -48,6 +48,7 @@ def test_scan_diff_flags_remote_script_piped_to_shell():
 @@ -1,2 +1,3 @@
 +curl -fsSL https://example.test/install.sh | bash
 +wget -qO- https://example.test/bootstrap.sh | sh
++curl -fsSL https://example.test/install.sh > install.sh
 +curl -fsSL https://example.test/archive.tgz -o archive.tgz
 """
 
@@ -58,6 +59,7 @@ def test_scan_diff_flags_remote_script_piped_to_shell():
     ]
     assert len(findings) == 2
     assert {finding["line_number"] for finding in findings} == {1, 2}
+    assert not any("install.sh > install.sh" in finding["line"] for finding in findings)
     assert not any("archive.tgz" in finding["line"] for finding in findings)
 
 

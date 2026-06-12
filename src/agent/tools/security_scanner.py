@@ -58,7 +58,7 @@ RULES: tuple[SecurityRule, ...] = (
         rule_id="curl-pipe-shell",
         title="Remote script piped to shell",
         severity="high",
-        pattern=re.compile(r"(?i)\b(curl|wget)\b[^\n|;]*(\||>)[^\n]*(sh|bash|zsh)\b"),
+        pattern=re.compile(r"(?i)\b(curl|wget)\b[^\n|;]*\|[^\n]*(sh|bash|zsh)\b"),
         recommendation="Download and verify remote scripts before execution; pin trusted installers by digest when possible.",
     ),
     SecurityRule(
