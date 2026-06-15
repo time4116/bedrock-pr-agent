@@ -114,6 +114,11 @@ def _redact(line: str) -> str:
     redacted = re.sub(r"AKIA[0-9A-Z]{16}", "AKIA[REDACTED]", redacted)
     redacted = re.sub(r"sk-(?:proj-)?[A-Za-z0-9_-]{8,}", "sk-[REDACTED]", redacted)
     redacted = re.sub(r"xox[baprs]-[A-Za-z0-9-]{8,}", "xoxb-[REDACTED]", redacted)
+    redacted = re.sub(
+        r"(?i)((?:api[_-]?key|secret|token|password)\s*[:=]\s*['\"])[^'\"]{8,}(['\"])",
+        r"\1[REDACTED]\2",
+        redacted,
+    )
     return redacted[:240]
 
 

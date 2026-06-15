@@ -37,6 +37,7 @@ def test_scan_diff_finds_language_agnostic_high_confidence_risks():
     }
     assert all(finding["file"] == "app/server.js" for finding in result["findings"])
     assert all(finding["line"].startswith("+") for finding in result["findings"])
+    assert not any("1234567890abcdef" in finding["line"] for finding in result["findings"])
     assert not any("context line" in finding["line"] for finding in result["findings"])
     assert not any("oldtoken" in finding["line"] for finding in result["findings"])
 
