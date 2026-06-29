@@ -63,7 +63,7 @@ def get_github_credentials() -> Dict[str, str]:
     Local dev: set GITHUB_TOKEN to a personal access token — Secrets Manager is skipped.
     Production: reads app_id, webhook_secret, private_key from Secrets Manager.
     """
-    pat = os.environ.get('GITHUB_TOKEN')
+    pat = os.environ.get('GITHUB_TOKEN', '').strip()
     if pat:
         return {
             'app_id': '',
