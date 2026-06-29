@@ -16,6 +16,7 @@ sys.modules.setdefault("botocore", fake_botocore)
 sys.modules.setdefault("botocore.exceptions", fake_botocore_exceptions)
 
 from src.utils.config import is_repo_allowed, is_security_scan_enabled  # noqa: E402
+from src.utils.secrets import get_github_credentials  # noqa: E402
 
 
 class RepoAllowlistSecurityTests(unittest.TestCase):
@@ -49,6 +50,33 @@ class SecurityScanFeatureFlagTests(unittest.TestCase):
             with self.subTest(value=value):
                 with patch.dict(os.environ, {"SECURITY_SCAN_ENABLED": value}, clear=False):
                     self.assertTrue(is_security_scan_enabled())
+
+
+class GitHubTokenCredentialTests(unittest.TestCase):
+    def setUp(self):
+        get_github_credentials.cache_clear()
+
+    def tearDown(self):
+        get_github_credentials.cache_clear()
+
+    def test_github_token_is_trimmed_before_use(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "  ghp_test_token  "}, clear=True):
+            creds = get_github_credentials()
+
+        self.assertEqual(creds["token"], "ghp_test_token")
+
+    def test_whitespace_only_github_token_is_not_accepted(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "   "}, clear=True), patch(
+            "src.utils.secrets.get_secret",
+            return_value={
+                "app_id": "123",
+                "webhook_secret": "secret",
+                "private_key": "key",
+            },
+        ):
+            creds = get_github_credentials()
+
+        self.assertNotIn("token", creds)
 
 
 if __name__ == "__main__":
