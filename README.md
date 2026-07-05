@@ -153,7 +153,7 @@ Common issues:
 
 ## Extension points
 
-- **CI failure analysis** — reuse the existing GitHub Actions log download/parsing path to summarize failed jobs and likely root causes.
-- **Repository profiles** — select different prompts, templates, validation tools, and severity thresholds per repository.
-- **Policy checks** — plug in workflow-specific checks for infrastructure, deployment safety, dependency changes, or security-sensitive paths.
-- **Cost controls** — add stronger token/diff budgeting and optional skip rules for low-risk changes.
+- **CI failure analysis**: reuse the existing GitHub Actions log download/parsing path to summarize failed jobs and likely root causes.
+- **Repository profiles**: select different prompts, templates, validation tools, and severity thresholds per repository.
+- **Policy checks**: plug in workflow-specific checks for infrastructure, deployment safety, dependency changes, or security-sensitive paths.
+- **Cost controls**: add stronger token/diff budgeting and optional skip rules for low-risk changes.

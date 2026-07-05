@@ -13,7 +13,7 @@ You need:
 
 ## 1. Create the GitHub App
 
-This creates the App and stores its credentials (`app_id`, `webhook_secret`, `private_key`) in AWS Secrets Manager — both are needed before CDK deploys.
+This creates the App and stores its credentials (`app_id`, `webhook_secret`, `private_key`) in AWS Secrets Manager; both are needed before CDK deploys.
 
 ```bash
 pip install -r requirements.txt
@@ -25,7 +25,7 @@ python scripts/create_github_app.py --store-secret
 python scripts/create_github_app.py --org my-org --store-secret
 ```
 
-The script opens your browser to a pre-filled GitHub App creation page. Click **Create GitHub App**, and it captures the credentials automatically. The webhook URL is set to a placeholder — you'll update it in step 6.
+The script opens your browser to a pre-filled GitHub App creation page. Click **Create GitHub App**, and it captures the credentials automatically. The webhook URL is set to a placeholder; you'll update it in step 6.
 
 > **Manual alternative:** GitHub → Settings → Developer settings → GitHub Apps → New GitHub App. Permissions: Issues (read & write), Pull requests (read & write), Contents / Actions / Metadata (read). Subscribe to `pull_request` events. The agent posts top-level PR timeline comments through GitHub's issue comments API, so **Issues: read & write is required** even though the comments appear on pull requests. Generate a private key. Store as a JSON secret in Secrets Manager at `github-pr-agent/github`:
 > ```json
@@ -79,7 +79,7 @@ This creates the CDK bootstrap stack (`CDKToolkit`) including the S3 bucket for 
 
 Skip this step if you're deploying locally.
 
-This creates an IAM role that GitHub Actions assumes via OIDC — no long-lived AWS credentials stored in GitHub. The role is scoped to what CDK needs: upload assets to S3/ECR and drive CloudFormation. Actual resource creation (Lambda, SQS, AgentCore, etc.) happens under the `cdk-cfn-exec-role` created by bootstrap, not this role.
+This creates an IAM role that GitHub Actions assumes via OIDC, so no long-lived AWS credentials are stored in GitHub. The role is scoped to what CDK needs: upload assets to S3/ECR and drive CloudFormation. Actual resource creation (Lambda, SQS, AgentCore, etc.) happens under the `cdk-cfn-exec-role` created by bootstrap, not this role.
 
 ```bash
 # Personal account
@@ -109,11 +109,11 @@ The script prints the role ARN. Add the following to **GitHub → Settings → S
 
 ## 6. Deploy
 
-**Option A — GitHub Actions (recommended)**
+**Option A: GitHub Actions (recommended)**
 
 Push to `main`. The `.github/workflows/deploy.yml` workflow runs `cdk deploy --all` automatically using the role from step 5.
 
-**Option B — local**
+**Option B: local**
 
 ```bash
 # Export env vars from your .env first
@@ -123,7 +123,7 @@ cd deploy
 cdk deploy --all
 ```
 
-CDK builds the AgentCore Docker image, pushes it to ECR, and creates all infrastructure. At the end it prints a `WebhookUrl` — copy it.
+CDK builds the AgentCore Docker image, pushes it to ECR, and creates all infrastructure. At the end it prints a `WebhookUrl`; copy it.
 
 **What CDK creates:**
 
@@ -152,7 +152,7 @@ In the GitHub App settings:
 
 1. Set **Webhook URL** to the `WebhookUrl` output from CDK (e.g. `https://abc123.execute-api.us-east-1.amazonaws.com/prod/webhook`)
 2. Set **Content type** to `application/json`
-3. Set **Active** to checked — `create_github_app.py` creates it inactive; you must enable it here
+3. Set **Active** to checked (`create_github_app.py` creates it inactive; you must enable it here)
 
 ---
 
@@ -162,5 +162,5 @@ GitHub App settings → **Install App** → select your org or specific reposito
 
 If you change app permissions later, GitHub requires the installation owner to approve the updated permissions. After adding or changing permissions, return to **Install App** and review/approve the installation again before retrying webhooks.
 
-Repos you install on must appear in `ALLOWED_REPOS`. An empty allowlist rejects all repositories; set `*` only when reviewing every installed repository is intentional. Open a pull request to verify — the agent should post a review comment within a few minutes.
+Repos you install on must appear in `ALLOWED_REPOS`. An empty allowlist rejects all repositories; set `*` only when reviewing every installed repository is intentional. Open a pull request to verify; the agent should post a review comment within a few minutes.
 

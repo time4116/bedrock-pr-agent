@@ -13,11 +13,11 @@ Bedrock PR Agent is designed to run from a public source repository while keepin
 
 The app should request only the permissions required by the active workflow:
 
-- **Contents: read** — fetch pull request files and diffs.
-- **Pull requests: read/write** — read pull request metadata.
-- **Issues: read/write** — create or update the top-level PR timeline comment, which uses GitHub's issue comments API.
-- **Actions: read** — optional, only needed when Terraform or CI log validation is enabled.
-- **Metadata: read** — required by GitHub Apps.
+- **Contents: read** to fetch pull request files and diffs.
+- **Pull requests: read/write** to read pull request metadata.
+- **Issues: read/write** to create or update the top-level PR timeline comment, which uses GitHub's issue comments API.
+- **Actions: read** is optional, only needed when Terraform or CI log validation is enabled.
+- **Metadata: read** is required by GitHub Apps.
 
 After changing GitHub App permissions, the installation owner must approve the updated permissions before new installation tokens include them.
 
