@@ -6,6 +6,7 @@ Responds to GitHub in <1 second to avoid delivery timeouts.
 """
 import json
 import os
+import base64
 import hmac
 import hashlib
 import boto3
@@ -64,6 +65,14 @@ def verify_signature(payload: str, signature: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+def _event_body(event: Dict[str, Any]) -> str:
+    """Return the decoded API Gateway body before HMAC verification."""
+    body = event.get('body') or '{}'
+    if event.get('isBase64Encoded'):
+        return base64.b64decode(body).decode('utf-8')
+    return body
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Lambda handler for GitHub webhook events.
@@ -92,7 +101,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.warning('Missing required headers')
             return {'statusCode': 400, 'body': json.dumps({'error': 'Missing required headers'})}
 
-        body = event.get('body', '{}')
+        try:
+            body = _event_body(event)
+        except (ValueError, UnicodeDecodeError):
+            logger.warning('Invalid webhook body encoding')
+            return {'statusCode': 400, 'body': json.dumps({'error': 'Invalid request body'})}
 
         if not verify_signature(body, signature):
             logger.error('Invalid webhook signature')
