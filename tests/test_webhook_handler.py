@@ -35,7 +35,7 @@ def _fake_client(service_name, *args, **kwargs):
 
 fake_boto3 = types.ModuleType("boto3")
 setattr(fake_boto3, "client", _fake_client)
-sys.modules.setdefault("boto3", fake_boto3)
+sys.modules["boto3"] = fake_boto3
 
 fake_botocore = types.ModuleType("botocore")
 fake_botocore_exceptions = types.ModuleType("botocore.exceptions")
