@@ -96,3 +96,16 @@ def test_handler_rejects_invalid_base64_body(monkeypatch):
     response = webhook.handler(event, None)
 
     assert response["statusCode"] == 400
+
+
+def test_handler_rejects_invalid_json_after_signature_verification(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    payload = "{not-json"
+
+    with patch(
+        "src.handlers.webhook.get_github_credentials", return_value={"webhook_secret": "secret"}
+    ):
+        response = webhook.handler(_event(payload, _signature(payload, "secret")), None)
+
+    assert response["statusCode"] == 400
+    assert json.loads(response["body"])["error"] == "Invalid request body"
