@@ -111,7 +111,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.error("Invalid webhook signature")
             return {"statusCode": 401, "body": json.dumps({"error": "Invalid signature"})}
 
-        payload = json.loads(body)
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            logger.warning("Invalid webhook JSON payload")
+            return {"statusCode": 400, "body": json.dumps({"error": "Invalid JSON payload"})}
 
         # Only process pull_request events
         if event_name != "pull_request":
