@@ -8,6 +8,7 @@ Responds to GitHub in <1 second to avoid delivery timeouts.
 import json
 import os
 import base64
+import binascii
 import hmac
 import hashlib
 import boto3
@@ -70,7 +71,7 @@ def _event_body(event: Dict[str, Any]) -> str:
     """Return the decoded API Gateway body before HMAC verification."""
     body = event.get("body") or "{}"
     if event.get("isBase64Encoded"):
-        return base64.b64decode(body).decode("utf-8")
+        return base64.b64decode(body, validate=True).decode("utf-8")
     return body
 
 
@@ -103,7 +104,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         try:
             body = _event_body(event)
-        except (ValueError, UnicodeDecodeError):
+        except (binascii.Error, ValueError, UnicodeDecodeError):
             logger.warning("Invalid webhook body encoding")
             return {"statusCode": 400, "body": json.dumps({"error": "Invalid request body"})}
 

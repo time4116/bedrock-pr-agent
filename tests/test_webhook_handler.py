@@ -98,6 +98,22 @@ def test_handler_rejects_invalid_base64_body(monkeypatch):
     assert response["statusCode"] == 400
 
 
+def test_handler_rejects_non_alphabet_base64_body(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    event = {
+        "body": "!!!!",
+        "isBase64Encoded": True,
+        "headers": {
+            "X-GitHub-Event": "pull_request",
+            "X-Hub-Signature-256": "sha256=ignored",
+        },
+    }
+
+    response = webhook.handler(event, None)
+
+    assert response["statusCode"] == 400
+
+
 def test_handler_rejects_signed_malformed_json(monkeypatch):
     monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
     payload = '{"repository": '
