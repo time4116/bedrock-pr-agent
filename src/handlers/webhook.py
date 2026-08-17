@@ -75,6 +75,15 @@ def _event_body(event: Dict[str, Any]) -> str:
     return body
 
 
+def _header(headers: Dict[str, Any], name: str) -> str:
+    """Return a header value without trusting gateway-specific casing."""
+    needle = name.lower()
+    for key, value in headers.items():
+        if key.lower() == needle:
+            return str(value)
+    return ""
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Lambda handler for GitHub webhook events.
@@ -95,8 +104,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         )
 
         headers = event.get("headers", {})
-        signature = headers.get("x-hub-signature-256") or headers.get("X-Hub-Signature-256")
-        event_name = headers.get("x-github-event") or headers.get("X-GitHub-Event")
+        signature = _header(headers, "x-hub-signature-256")
+        event_name = _header(headers, "x-github-event")
 
         if not signature or not event_name:
             logger.warning("Missing required headers")

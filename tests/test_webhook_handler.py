@@ -82,6 +82,30 @@ def test_handler_decodes_base64_body_before_signature_verification(monkeypatch):
     assert json.loads(response["body"])["pr_number"] == 42
 
 
+def test_handler_accepts_mixed_case_gateway_headers(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    payload = json.dumps(
+        {
+            "action": "opened",
+            "repository": {"full_name": "time4116/example"},
+            "pull_request": {"number": 42},
+        }
+    )
+    event = _event(payload, _signature(payload, "secret"))
+    event["headers"] = {
+        "X-Github-Event": "pull_request",
+        "X-Hub-Signature-256": _signature(payload, "secret"),
+    }
+
+    with patch(
+        "src.handlers.webhook.get_github_credentials", return_value={"webhook_secret": "secret"}
+    ):
+        response = webhook.handler(event, None)
+
+    assert response["statusCode"] == 202
+    assert json.loads(response["body"])["pr_number"] == 42
+
+
 def test_handler_rejects_invalid_base64_body(monkeypatch):
     monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
     event = {
