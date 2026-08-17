@@ -76,12 +76,12 @@ def _event_body(event: Dict[str, Any]) -> str:
 
 
 def _header(headers: Dict[str, Any], name: str) -> str:
-    """Return a header value without trusting gateway-specific casing."""
+    """Return one case-insensitive header value, rejecting ambiguous duplicates."""
     needle = name.lower()
-    for key, value in headers.items():
-        if key.lower() == needle:
-            return str(value)
-    return ""
+    matches = [str(value) for key, value in headers.items() if key.lower() == needle]
+    if len(matches) != 1:
+        return ""
+    return matches[0]
 
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:

@@ -106,6 +106,58 @@ def test_handler_accepts_mixed_case_gateway_headers(monkeypatch):
     assert json.loads(response["body"])["pr_number"] == 42
 
 
+def test_handler_rejects_duplicate_signature_header_casing(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    _fake_sqs.messages.clear()
+    payload = json.dumps(
+        {
+            "action": "opened",
+            "repository": {"full_name": "time4116/example"},
+            "pull_request": {"number": 42},
+        }
+    )
+    event = _event(payload, _signature(payload, "secret"))
+    event["headers"] = {
+        "X-GitHub-Event": "pull_request",
+        "X-Hub-Signature-256": _signature(payload, "secret"),
+        "x-hub-signature-256": "sha256=invalid",
+    }
+
+    with patch(
+        "src.handlers.webhook.get_github_credentials", return_value={"webhook_secret": "secret"}
+    ):
+        response = webhook.handler(event, None)
+
+    assert response["statusCode"] == 400
+    assert _fake_sqs.messages == []
+
+
+def test_handler_rejects_duplicate_event_header_casing(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    _fake_sqs.messages.clear()
+    payload = json.dumps(
+        {
+            "action": "opened",
+            "repository": {"full_name": "time4116/example"},
+            "pull_request": {"number": 42},
+        }
+    )
+    event = _event(payload, _signature(payload, "secret"))
+    event["headers"] = {
+        "X-GitHub-Event": "pull_request",
+        "x-github-event": "issues",
+        "X-Hub-Signature-256": _signature(payload, "secret"),
+    }
+
+    with patch(
+        "src.handlers.webhook.get_github_credentials", return_value={"webhook_secret": "secret"}
+    ):
+        response = webhook.handler(event, None)
+
+    assert response["statusCode"] == 400
+    assert _fake_sqs.messages == []
+
+
 def test_handler_rejects_invalid_base64_body(monkeypatch):
     monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
     event = {
