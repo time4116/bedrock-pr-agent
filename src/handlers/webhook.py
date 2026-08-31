@@ -158,6 +158,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         pr = payload.get("pull_request", {})
         pr_number = pr.get("number")
+        if not isinstance(pr_number, int):
+            logger.warning("Malformed pull_request payload", {"pr_number": pr_number})
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Invalid pull_request number"}),
+            }
 
         logger.info(
             "Queueing PR event for processing",
