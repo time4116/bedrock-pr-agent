@@ -158,7 +158,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         pr = payload.get("pull_request", {})
         pr_number = pr.get("number")
-        if not isinstance(pr_number, int):
+        if type(pr_number) is not int or pr_number <= 0:
             logger.warning("Malformed pull_request payload", {"pr_number": pr_number})
             return {
                 "statusCode": 400,
