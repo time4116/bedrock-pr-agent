@@ -201,3 +201,66 @@ def test_handler_rejects_signed_malformed_json(monkeypatch):
 
     assert response["statusCode"] == 400
     assert json.loads(response["body"])["error"] == "Invalid JSON payload"
+
+
+def test_handler_rejects_pull_request_payload_without_numeric_number(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    _fake_sqs.messages.clear()
+    payload = json.dumps(
+        {
+            "action": "opened",
+            "repository": {"full_name": "time4116/example"},
+            "pull_request": {"number": None},
+        }
+    )
+
+    with patch(
+        "src.handlers.webhook.get_github_credentials", return_value={"webhook_secret": "secret"}
+    ):
+        response = webhook.handler(_event(payload, _signature(payload, "secret")), None)
+
+    assert response["statusCode"] == 400
+    assert json.loads(response["body"])["error"] == "Invalid pull_request number"
+    assert _fake_sqs.messages == []
+
+
+def test_handler_rejects_boolean_pull_request_number(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    _fake_sqs.messages.clear()
+    payload = json.dumps(
+        {
+            "action": "opened",
+            "repository": {"full_name": "time4116/example"},
+            "pull_request": {"number": True},
+        }
+    )
+
+    with patch(
+        "src.handlers.webhook.get_github_credentials", return_value={"webhook_secret": "secret"}
+    ):
+        response = webhook.handler(_event(payload, _signature(payload, "secret")), None)
+
+    assert response["statusCode"] == 400
+    assert json.loads(response["body"])["error"] == "Invalid pull_request number"
+    assert _fake_sqs.messages == []
+
+
+def test_handler_rejects_non_positive_pull_request_number(monkeypatch):
+    monkeypatch.setenv("ALLOWED_REPOS", "time4116/example")
+    _fake_sqs.messages.clear()
+    payload = json.dumps(
+        {
+            "action": "opened",
+            "repository": {"full_name": "time4116/example"},
+            "pull_request": {"number": 0},
+        }
+    )
+
+    with patch(
+        "src.handlers.webhook.get_github_credentials", return_value={"webhook_secret": "secret"}
+    ):
+        response = webhook.handler(_event(payload, _signature(payload, "secret")), None)
+
+    assert response["statusCode"] == 400
+    assert json.loads(response["body"])["error"] == "Invalid pull_request number"
+    assert _fake_sqs.messages == []
