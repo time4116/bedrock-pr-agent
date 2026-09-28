@@ -147,15 +147,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "body": json.dumps({"message": "Repository not in allowed list"}),
             }
 
-        if not _check_rate_limit(repo_full_name):
-            logger.info(
-                "Rate limit reached for repo", {"repo": repo_full_name, "limit": _WEEKLY_LIMIT}
-            )
-            return {
-                "statusCode": 200,
-                "body": json.dumps({"message": "Weekly review limit reached"}),
-            }
-
         pr = payload.get("pull_request", {})
         pr_number = pr.get("number")
         if type(pr_number) is not int or pr_number <= 0:
@@ -163,6 +154,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return {
                 "statusCode": 400,
                 "body": json.dumps({"error": "Invalid pull_request number"}),
+            }
+        if not _check_rate_limit(repo_full_name):
+            logger.info(
+                "Rate limit reached for repo", {"repo": repo_full_name, "limit": _WEEKLY_LIMIT}
+            )
+            return {
+                "statusCode": 200,
+                "body": json.dumps({"message": "Weekly review limit reached"}),
             }
 
         logger.info(
