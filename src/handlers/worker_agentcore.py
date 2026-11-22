@@ -135,6 +135,7 @@ def _invoke_agent_for_pr(
                 'error': result.get('error'),
                 'pr_number': pr_number
             })
+            raise RuntimeError(f"AgentCore returned error: {result.get('error')}")
 
     except Exception as error:
         error_type = type(error).__name__
@@ -156,3 +157,4 @@ def _invoke_agent_for_pr(
                 'pr_number': pr_number,
                 'repo': repo_full_name
             })
+        raise
