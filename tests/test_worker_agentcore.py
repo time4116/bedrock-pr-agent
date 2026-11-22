@@ -89,6 +89,30 @@ def test_invalid_agent_response_reaches_sqs_handler(worker):
         module.handler(_event(), None)
 
 
+@pytest.mark.parametrize(
+    "result",
+    [{}, {"status": "failed", "error": "review failed"}, {"status": None}],
+    ids=["missing-status", "unknown-status", "null-status"],
+)
+def test_unrecognized_agent_result_reaches_sqs_handler(worker, result):
+    module, client = worker
+    client.invoke_agent_runtime.return_value = _response(result)
+
+    with pytest.raises(RuntimeError, match="AgentCore returned unexpected status"):
+        module.handler(_event(), None)
+    client.invoke_agent_runtime.assert_called_once()
+
+
+@pytest.mark.parametrize("result", [None, [], "success", 42])
+def test_malformed_agent_result_reaches_sqs_handler(worker, result):
+    module, client = worker
+    client.invoke_agent_runtime.return_value = _response(result)
+
+    with pytest.raises(RuntimeError, match="AgentCore returned invalid result"):
+        module.handler(_event(), None)
+    client.invoke_agent_runtime.assert_called_once()
+
+
 @pytest.mark.parametrize("status", ["success", "skipped"])
 def test_completed_agent_result_is_acknowledged(worker, status):
     module, client = worker
