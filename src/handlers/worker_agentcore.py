@@ -114,6 +114,8 @@ def _invoke_agent_for_pr(
             content_chunks.append(chunk.decode('utf-8'))
 
         result = json.loads(''.join(content_chunks))
+        if not isinstance(result, dict):
+            raise RuntimeError('AgentCore returned invalid result: expected an object')
 
         agent_response = result.get('agent_response', '')
         if not isinstance(agent_response, str):
@@ -131,10 +133,9 @@ def _invoke_agent_for_pr(
                 'pr_number': pr_number
             })
         elif result.get('status') == 'error':
-            logger.error('Agent returned error', {
-                'error': result.get('error'),
-                'pr_number': pr_number
-            })
+            raise RuntimeError(f"AgentCore returned error: {result.get('error')}")
+        else:
+            raise RuntimeError(f"AgentCore returned unexpected status: {result.get('status')!r}")
 
     except Exception as error:
         error_type = type(error).__name__
@@ -156,3 +157,4 @@ def _invoke_agent_for_pr(
                 'pr_number': pr_number,
                 'repo': repo_full_name
             })
+        raise
