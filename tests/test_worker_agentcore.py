@@ -77,7 +77,7 @@ def test_agent_error_result_reaches_sqs_handler(worker):
         {"status": "error", "error": "review failed"}
     )
 
-    with pytest.raises(RuntimeError, match="review failed"):
+    with pytest.raises(RuntimeError, match="AgentCore returned error status"):
         module.handler(_event(), None)
 
 
@@ -111,6 +111,28 @@ def test_malformed_agent_result_reaches_sqs_handler(worker, result):
     with pytest.raises(RuntimeError, match="AgentCore returned invalid result"):
         module.handler(_event(), None)
     client.invoke_agent_runtime.assert_called_once()
+
+
+def test_agent_content_does_not_appear_in_worker_logs(worker):
+    module, client = worker
+    marker = "SENSITIVE_REVIEW_TEXT"
+    results = [
+        {"status": "success", "agent_response": marker},
+        {"status": "skipped", "reason": marker},
+        {"status": "error", "error": marker},
+        {"status": marker},
+    ]
+    with patch.object(module.logger, "info") as info, patch.object(module.logger, "error") as error:
+        for result in results:
+            client.invoke_agent_runtime.return_value = _response(result)
+            if result["status"] in ("success", "skipped"):
+                module.handler(_event(), None)
+            else:
+                with pytest.raises(RuntimeError) as caught:
+                    module.handler(_event(), None)
+                assert marker not in str(caught.value)
+        assert marker not in str(info.call_args_list)
+        assert marker not in str(error.call_args_list)
 
 
 @pytest.mark.parametrize("status", ["success", "skipped"])
